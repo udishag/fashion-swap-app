@@ -1,0 +1,174 @@
+/* Import clean typography */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg-color: #f7f6f3;
+  /* Rhode signature soft off-white/cream */
+  --text-primary: #1c1b1a;
+  /* Deep charcoal, softer than pure black */
+  --text-secondary: #706e6b;
+  /* Muted taupe for descriptions */
+  --card-bg: #ffffff;
+  --font-main: 'Inter', sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header/Navigation */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  background-color: var(--bg-color);
+}
+
+.brand-logo {
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.5px;
+  text-transform: lowercase;
+  /* Rhode signature */
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: var(--text-primary);
+  margin-left: 30px;
+  font-size: 14px;
+  text-transform: lowercase;
+}
+
+/*floating side watilist*/
+
+.floating-side-waitlist {
+  position: absolute;
+  left: 40px;
+  top: 140px;
+  z-index: 10;
+
+  /* Styling & Typography Override */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  /* Explicitly matches website font */
+  background-color: #ffffff;
+  color: #1c1b1a;
+  /* Matching the softer dark primary text */
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: lowercase;
+  /* Lowercase styling to perfectly match the "moss." aesthetic */
+  border-radius: 20px;
+  /* Smooth pill capsule finish */
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s ease;
+}
+
+/* Product Grid Layout */
+.main-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 60px 20px;
+}
+
+.hero-section {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.hero-section h1 {
+  font-size: 40px;
+  font-weight: 300;
+  text-transform: lowercase;
+  margin-bottom: 10px;
+  letter-spacing: -1px;
+}
+
+.hero-section p {
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 40px;
+}
+
+/* The Magic Hover Card Effect */
+.product-card {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+.image-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  /* Perfect luxury fashion portrait aspect ratio */
+  overflow: hidden;
+  background-color: #e2e1de;
+  margin-bottom: 15px;
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.5s ease-in-out;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Hidden by default */
+.product-image.hover-img {
+  opacity: 0;
+}
+
+/* On Hover: Swap Opacities Smoothly */
+.product-card:hover .default-img {
+  opacity: 0;
+}
+
+.product-card:hover .hover-img {
+  opacity: 1;
+}
+
+/* Product Info styling */
+.product-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.product-title {
+  font-size: 15px;
+  font-weight: 400;
+  text-transform: lowercase;
+  margin: 0 0 5px 0;
+}
+
+.product-category {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  text-transform: lowercase;
+}
+
+.product-price {
+  font-size: 15px;
+  font-weight: 400;
+}
