@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './Register.css';
 
+// Import the client backend integration logic smoothly
+import { supabase } from './supabaseClient';
+
 // Import your asset graphic using native JavaScript routing to avoid path breaking
 import registerPhoto from '../assets/registerPhoto.jpeg';
 
@@ -96,7 +99,7 @@ const Register = ({ onRegisterSuccess, onNavigateToLogin }) => {
         });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (errors.email || errors.phone || !passwordCriteria.length || !passwordCriteria.alpha || !passwordCriteria.number) {
             setStatusMessage('please optimize and resolve validation input field errors.');
@@ -108,7 +111,36 @@ const Register = ({ onRegisterSuccess, onNavigateToLogin }) => {
         }
 
         setStatusMessage('creating account container inside database context...');
-        if (onRegisterSuccess) onRegisterSuccess(formData);
+
+        try {
+            const { data, error } = await supabase.auth.signUp({
+                email: formData.email,
+                password: formData.password,
+                options: {
+                    data: {
+                        username: formData.username,
+                        phone: formData.phone,
+                        brands_interested: formData.brandsInterested,
+                        styles_aesthetics: formData.stylesAesthetics,
+                        latitude: formData.latitude,
+                        longitude: formData.longitude
+                    }
+                }
+            });
+
+            if (error) {
+                setStatusMessage(`database submission failure: ${error.message.toLowerCase()}`);
+            } else if (data?.user) {
+                setStatusMessage('account initialized successfully!');
+
+                if (onRegisterSuccess) {
+                    onRegisterSuccess(formData);
+                }
+            }
+        } catch (catchErr) {
+            console.error("Supabase integration unexpected error loop:", catchErr);
+            setStatusMessage('unexpected network context connection loop broken.');
+        }
     };
 
     return (
@@ -135,12 +167,12 @@ const Register = ({ onRegisterSuccess, onNavigateToLogin }) => {
 
                         <div className="input-row">
                             <input type="email" name="email" placeholder="email address" required onChange={handleInputChange} />
-                            {errors.email && <p className="aritzia-error-msg">{errors.email}</p>}
+                            {errors.email && <p className="moss-error-msg">{errors.email}</p>}
                         </div>
 
                         <div className="input-row">
                             <input type="tel" name="phone" placeholder="phone number" required onChange={handleInputChange} />
-                            {errors.phone && <p className="aritzia-error-msg">{errors.phone}</p>}
+                            {errors.phone && <p className="moss-error-msg">{errors.phone}</p>}
                         </div>
 
                         <div className="input-row password-wrapper">
@@ -149,6 +181,9 @@ const Register = ({ onRegisterSuccess, onNavigateToLogin }) => {
                                 name="password"
                                 placeholder="password"
                                 required
+                                autoCapitalize="none"
+                                autoCorrect="off"
+                                spellCheck="false"
                                 value={formData.password}
                                 onChange={handlePasswordChange}
                             />
@@ -157,8 +192,8 @@ const Register = ({ onRegisterSuccess, onNavigateToLogin }) => {
                             </span>
                         </div>
 
-                        {/* RESTORED: Horizontal Validator Dashboard Alignment */}
-                        <div className="password-validator-dashboard">
+                        {/* FIXED: Horizontal Validator Dashboard matches CSS container rules */}
+                        <div className="moss-password-dashboard">
                             <span className={passwordCriteria.length ? "met" : "unmet"}>• min 8 chars</span>
                             <span className={passwordCriteria.alpha ? "met" : "unmet"}>• letter</span>
                             <span className={passwordCriteria.number ? "met" : "unmet"}>• number</span>
