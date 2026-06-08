@@ -7,6 +7,54 @@ import { supabase } from './supabaseClient';
 // Import your asset graphic using native JavaScript routing to avoid path breaking
 import registerPhoto from '../assets/registerPhoto.jpeg';
 
+const getWelcomeEmailHTML = (username) => `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>welcome to moss.</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #ffffff; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+        .wrapper { width: 100%; max-width: 500px; margin: 0 auto; padding: 40px 20px; text-align: center; }
+        .logo { font-size: 2.4rem; font-weight: 700; letter-spacing: -1px; text-transform: lowercase; color: #000000; margin-bottom: 5px; }
+        .subtitle { font-size: 0.9rem; font-weight: 400; color: #666666; margin-bottom: 35px; text-transform: lowercase; letter-spacing: 0.5px; }
+        .hero-container { width: 100%; margin-bottom: 35px; border: 1px solid #eeeeee; }
+        .hero-image { width: 100%; height: auto; display: block; object-fit: cover; }
+        .headline { font-size: 1.6rem; font-weight: 400; color: #000000; text-transform: lowercase; margin-bottom: 15px; letter-spacing: -0.5px; }
+        .body-text { font-size: 0.9rem; line-height: 1.6; color: #333333; text-align: center; max-width: 420px; margin: 0 auto 40px auto; font-weight: 300; }
+        .signature-section { margin-top: 40px; font-family: inherit; color: #000000; font-size: 0.95rem; line-height: 1.5; text-transform: lowercase; }
+        .footer { font-size: 0.7rem; color: #999999; text-transform: lowercase; margin-top: 60px; border-top: 1px solid #eeeeee; padding-top: 20px; letter-spacing: 0.5px; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="logo">moss.</div>
+        <div class="subtitle">welcome to the new era of style.</div>
+        
+        <div class="hero-container">
+            <img src="https://i.postimg.cc/x8GyDTxx/udi-Headshot.png" alt="moss. founders" class="hero-image" />
+        </div>
+
+        <div class="headline">your inbox just got more beautiful.</div>
+        
+        <div class="body-text">
+            congratulations ${username.toLowerCase()}, you're officially on the list. we are building a space where fashion is defined by personal curation, and we are incredibly excited to have you along for this journey. explore your profile, find your next favorite piece, and become part of a community that understands style is personal.
+        </div>
+
+        <div class="signature-section">
+            much love,<br>
+            <strong>udi & co-founder</strong>
+        </div>
+
+        <div class="footer">
+            &copy; moss. 2026. toronto & mississauga.<br>
+            <a href="#" style="color: #999999; text-decoration: underline;">unsubscribe</a>
+        </div>
+    </div>
+</body>
+</html>
+`;
+
 const Register = ({ onRegisterSuccess, onNavigateToLogin }) => {
     // Establish baseline default backup constants directly inside state so pills never show empty
     const [validBrands, setValidBrands] = useState([
@@ -132,6 +180,27 @@ const Register = ({ onRegisterSuccess, onNavigateToLogin }) => {
                 setStatusMessage(`database submission failure: ${error.message.toLowerCase()}`);
             } else if (data?.user) {
                 setStatusMessage('account initialized successfully!');
+
+                // --- ADDED: EMAILING ENGINE FETCH API ---
+                try {
+                    await fetch('https://api.resend.com/emails', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${import.meta.env.VITE_RESEND_API_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            from: 'moss. <onboarding@resend.dev>',
+                            to: formData.email,
+                            subject: 'welcome to moss.',
+                            html: getWelcomeEmailHTML(formData.username)
+                        })
+                    });
+                    console.log("Welcome automated email successfully dispatched to Resend network context.");
+                } catch (emailErr) {
+                    console.error("Mailing loop network connection failure:", emailErr);
+                }
+                // --- END OF EMAIL ROUTINE ---
 
                 if (onRegisterSuccess) {
                     onRegisterSuccess(formData);
