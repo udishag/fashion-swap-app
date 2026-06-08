@@ -9,7 +9,7 @@ body {
   color: #000;
 }
 
-/* Enforce signature clean lowercase typography globally across MOSS */
+/* Enforce signature clean lowercase typography globally */
 h1,
 h2,
 h3,
@@ -26,27 +26,35 @@ a {
 }
 
 /* ==========================================================================
-   2. NAVBAR NAVIGATION LAYOUT
+   2. GLOBAL ALIGNMENT & NAVBAR
    ========================================================================== */
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 40px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 40px;
+  padding: 30px 0;
+  /* Alignment handled by page-container */
   background: #fff;
-  border-bottom: 1px solid #f9f9f9;
 }
 
 .navbar h1 {
   margin: 0;
   font-size: 1.6rem;
   font-weight: bold;
+  cursor: pointer;
 }
 
 .nav-links {
   display: flex;
   gap: 32px;
-  /* Adds explicit spacing between shop, profile, and logout */
   align-items: center;
 }
 
@@ -54,15 +62,30 @@ a {
   cursor: pointer;
   font-size: 0.95rem;
   font-weight: 400;
-  transition: color 0.2s ease;
 }
 
-.nav-links span:hover {
-  color: #666;
+/* Standardized Section Headers for perfect alignment */
+.section-header {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 24px 0;
+  /* Zero left margin ensures vertical alignment */
+  text-transform: lowercase;
+  letter-spacing: 0.05em;
+  display: block;
+  width: 100%;
+}
+
+hr {
+  border: 0;
+  height: 1px;
+  background: #eee;
+  margin: 40px 0;
+  width: 100%;
 }
 
 /* ==========================================================================
-   3. 50-50 SPLIT LOOKBOOK LOGIN LAYOUT
+   3. 50-50 SPLIT LOGIN & LOGOUT (SLEEK RESTORATION)
    ========================================================================== */
 .login-split-container {
   display: flex;
@@ -96,6 +119,7 @@ a {
 .login-form-wrapper {
   width: 100%;
   max-width: 340px;
+  /* Keeps the form sleek and narrow */
   display: flex;
   flex-direction: column;
 }
@@ -112,95 +136,62 @@ a {
   color: #666;
   margin: 0 0 40px 0;
   text-align: center;
-  line-height: 1.4;
 }
 
-/* Minimalist Form Controls */
+/* Minimalist Underlined Inputs */
 .input-group {
   display: flex;
   flex-direction: column;
   margin-bottom: 24px;
-  width: 100%;
 }
 
 .input-group label {
   font-size: 0.85rem;
-  color: #333;
-  margin-bottom: 6px;
+  color: #000;
+  margin-bottom: 4px;
 }
 
 .input-group input {
-  padding: 10px 0;
+  padding: 8px 0;
   font-size: 0.95rem;
   border: none;
   border-bottom: 1px solid #ccc;
+  /* Sleek underline */
   outline: none;
   background: transparent;
-  transition: border-color 0.2s;
+  width: 100%;
 }
 
 .input-group input:focus {
   border-bottom-color: #000;
 }
 
-/* Rounded Pill Button Style */
 .login-btn {
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   background: #333;
   color: #fff;
   border: none;
-  border-radius: 24px;
+  border-radius: 25px;
+  /* Pill shape */
   font-size: 0.95rem;
   cursor: pointer;
   margin-top: 10px;
-  transition: background 0.2s;
-}
-
-.login-btn:hover {
-  background: #000;
-}
-
-.login-footer-text {
-  font-size: 0.8rem;
-  color: #888;
-  text-align: center;
-  margin-top: 20px;
 }
 
 /* ==========================================================================
-   4. CURATED FEED GRID LAYOUT (FIXES IMAGE OVERLAPPING)
+   4. CURATED FEED & RECENT TRADES GRID
    ========================================================================== */
-.curated-feed-wrapper {
-  margin-top: 40px;
-  width: 100%;
-}
-
-.curated-feed-wrapper h2 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 24px;
-}
-
 .feed-grid {
   display: grid;
-  /* Dynamically displays cards side-by-side cleanly depending on viewport width */
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 40px 32px;
   width: 100%;
 }
 
-.product-card {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-
-/* Binds lookbook image scaling to exact container bounds */
 .product-card-image-wrapper {
   width: 100%;
   height: 420px;
-  /* Constrains visual height perfectly */
   overflow: hidden;
   background-color: #fafafa;
 }
@@ -209,23 +200,5 @@ a {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  /* Crops smoothly instead of breaking your layout dimensions */
   display: block;
-}
-
-.product-card-meta {
-  margin-top: 16px;
-}
-
-.product-card-title {
-  margin: 0 0 4px 0;
-  font-size: 1rem;
-  font-weight: 500;
-}
-
-.product-card-subtitle {
-  margin: 0;
-  font-size: 0.88rem;
-  color: #666;
-  line-height: 1.4;
 }

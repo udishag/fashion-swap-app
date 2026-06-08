@@ -6,6 +6,8 @@ app = Flask(__name__)
 # CORS allows your React frontend running on localhost:5173 to talk to your Python backend
 CORS(app)
 
+
+
 @app.route('/api/feed', methods=['GET'])
 def get_feed():
     # Grab user variables from the frontend web request url

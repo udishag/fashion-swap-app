@@ -3,7 +3,7 @@ import shanzayImg from '../assets/shanzay.JPG';
 import emImg from '../assets/em.JPG';
 import udishaImg from '../assets/udisha.jpg';
 
-const Login = ({ onLogin }) => {
+const Login = ({ onLogin, onNavigateToRegister }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [currentSlide, setCurrentSlide] = useState(0);
@@ -77,7 +77,7 @@ const Login = ({ onLogin }) => {
                     </form>
 
                     <p className="login-footer-text">
-                        don't have an account? <span style={{ textDecoration: 'underline', cursor: 'pointer', color: '#000' }}>sign up!</span>
+                        don't have an account? <span onClick={onNavigateToRegister} style={{ textDecoration: 'underline', cursor: 'pointer', color: '#000' }}>sign up!</span>
                     </p>
                 </div>
             </div>

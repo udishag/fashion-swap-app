@@ -1,0 +1,280 @@
+/* Scoped parent container protects your global system pages from style bleeding */
+.moss-register-container {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+    /* Inherits your project's default font family setup from index.css */
+    font-family: inherit;
+    background-color: #ffffff;
+}
+
+/* Left Graphic Display Container Panel */
+.register-visual-panel {
+    position: relative;
+    width: 45%;
+    overflow: hidden;
+}
+
+.branding-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.branding-overlay-title {
+    position: absolute;
+    top: 10%;
+    left: 8%;
+    color: #ffffff;
+}
+
+/* Updated to match your bold 'moss.' logo branding exactly */
+.branding-overlay-title h1 {
+    font-size: 2.8rem;
+    font-weight: 700;
+    letter-spacing: -1px;
+    text-transform: lowercase;
+    margin: 0 0 4px 0;
+}
+
+.branding-overlay-title p {
+    font-size: 0.95rem;
+    font-weight: 400;
+    letter-spacing: 0px;
+    opacity: 0.85;
+}
+
+/* Right Input Registration Registry Processing Column */
+.register-form-panel {
+    width: 55%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 60px;
+}
+
+.form-contents-wrapper {
+    width: 100%;
+    max-width: 460px;
+}
+
+/* Updated to match the lowercase, centered, bold layout of your login header */
+.form-contents-wrapper h2 {
+    font-size: 2.2rem;
+    font-weight: 400;
+    text-align: center;
+    text-transform: lowercase;
+    color: #000000;
+    margin-bottom: 2px;
+}
+
+.signin-prompt {
+    font-size: 0.9rem;
+    color: #666666;
+    text-align: center;
+    margin-bottom: 35px;
+    text-transform: lowercase;
+}
+
+.signin-prompt span {
+    color: #000000;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.minimalist-input-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.input-row {
+    width: 100%;
+}
+
+.minimalist-input-form input[type="text"],
+.minimalist-input-form input[type="email"],
+.minimalist-input-form input[type="tel"],
+.minimalist-input-form input[type="password"] {
+    width: 100%;
+    padding: 14px 0px;
+    border: none;
+    border-bottom: 1px solid #cccccc;
+    font-size: 1rem;
+    background: transparent;
+    outline: none;
+    transition: border-color 0.2s ease;
+    font-family: inherit;
+}
+
+.minimalist-input-form input:focus {
+    border-bottom: 1px solid #000000;
+}
+
+.minimalist-input-form input::placeholder {
+    text-transform: lowercase;
+    color: #999999;
+}
+
+/* Password Visibility Logic Layers */
+.password-wrapper {
+    position: relative;
+}
+
+.toggle-password-visibility {
+    position: absolute;
+    right: 5px;
+    top: 16px;
+    font-size: 0.8rem;
+    text-decoration: underline;
+    color: #333333;
+    cursor: pointer;
+    text-transform: lowercase;
+}
+
+/* --- UPDATED: Horizontal Snapping Password Dashboard Dashboard --- */
+.moss-password-dashboard {
+    display: flex;
+    flex-direction: row;
+    /* Forces horizontal row layout instead of stacking vertically */
+    flex-wrap: wrap;
+    /* Wraps cleanly if the screen space shrinks */
+    gap: 12px;
+    /* Provides perfect spacing padding between the horizontal text flags */
+    margin-top: -8px;
+    margin-bottom: 5px;
+}
+
+.moss-password-dashboard span {
+    font-size: 0.75rem;
+    text-transform: lowercase;
+    transition: color 0.2s ease;
+}
+
+.moss-password-dashboard span.unmet {
+    color: #b0b0b0;
+}
+
+.moss-password-dashboard span.met {
+    color: #2e7d32;
+    font-weight: 500;
+}
+
+/* --- Inline Validation Error Messages --- */
+.moss-error-msg {
+    color: #d32f2f;
+    font-size: 0.8rem;
+    margin: 4px 0 0 0;
+    text-transform: lowercase;
+}
+
+/* --- Interactive Selection Tag Pill Elements --- */
+.tag-selection-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.tag-selection-section label {
+    font-size: 0.85rem;
+    color: #666666;
+    text-transform: lowercase;
+}
+
+.tag-cloud-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.pill-selection-tag {
+    background: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    color: #333333;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    text-transform: lowercase;
+}
+
+.pill-selection-tag:hover {
+    border-color: #000000;
+    background: #f0f0f0;
+}
+
+.pill-selection-tag.active {
+    background: #000000;
+    border-color: #000000;
+    color: #ffffff;
+}
+
+/* Custom Styled Input Form Elements */
+.file-upload-row {
+    margin-top: 5px;
+}
+
+.custom-file-label {
+    display: inline-block;
+    padding: 8px 16px;
+    border: 1px solid #000000;
+    background-color: transparent;
+    color: #000000;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-transform: lowercase;
+}
+
+.custom-file-label:hover {
+    background-color: #f5f5f5;
+}
+
+.minimalist-input-form input[type="file"] {
+    display: none;
+}
+
+.file-ready-text {
+    display: block;
+    font-size: 0.8rem;
+    color: #2e7d32;
+    margin-top: 5px;
+}
+
+.location-awareness-status p {
+    font-size: 0.8rem;
+    color: #666666;
+    margin: 0;
+}
+
+/* MOSS Custom Premium Action Buttons */
+.moss-black-submit-btn {
+    width: 100%;
+    background-color: #000000;
+    color: #ffffff;
+    border: none;
+    padding: 16px;
+    font-size: 1rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    margin-top: 10px;
+    text-transform: lowercase;
+    font-weight: 500;
+    transition: opacity 0.2s ease;
+}
+
+.moss-black-submit-btn:hover {
+    opacity: 0.85;
+}
+
+.form-status-alert {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #d32f2f;
+    margin-top: 10px;
+    text-transform: lowercase;
+}

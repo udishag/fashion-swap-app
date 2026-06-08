@@ -5,12 +5,16 @@ import UploadForm from './components/UploadForm';
 import ProfileHeader from './components/ProfileHeader';
 import RecentTrades from './components/RecentTrades';
 import Login from './components/Login';
+import Register from './components/Register'; // Import the new MOSS registration component
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // Controls login access
-  const [view, setView] = useState('feed'); // Tracks: 'feed', 'shop', or 'profile'
+  const [isAuthenticated, setIsAuthenticated] = useState(false); // Controls dashboard login access
+  const [view, setView] = useState('feed'); // Tracks authenticated dashboard views: 'feed', 'shop', or 'profile'
+  const [authView, setAuthView] = useState('login'); // Tracks unauthenticated views: 'login' or 'register'
   const [products, setProducts] = useState([]);
+  const [userSession, setUserSession] = useState(null); // Dynamic session storage context for database registration payload
 
+  // Sync with your Python backend database
   useEffect(() => {
     fetch('http://127.0.0.1:5000/api/products')
       .then(res => res.json())
@@ -18,20 +22,63 @@ function App() {
       .catch(err => console.error("Database connection missing:", err));
   }, []);
 
-  // If user hasn't authenticated yet, intercept routing and show the 50-50 layout
+  // Handle successful login
+  const handleLoginSuccess = (user) => {
+    setUserSession(user);
+    setIsAuthenticated(true);
+  };
+
+  // Handle successful registration pipeline
+  const handleRegisterSuccess = (newUserProfile) => {
+    setUserSession(newUserProfile);
+    setIsAuthenticated(true); // Automatically logs them in upon successful sign up
+  };
+
+  // Immediate logout redirect reset loop
+  const handleLogout = () => {
+    setIsAuthenticated(false); // Shows the unauthenticated screens
+    setAuthView('login');       // Defaults back to login layout for safety
+    setView('feed');           // Resets standard view back to default
+    setUserSession(null);      // Clears session buffer
+  };
+
+  // ========================================================
+  // 1. UNAUTHENTICATED ROUTING LAYER (Login / Register Split)
+  // ========================================================
   if (!isAuthenticated) {
-    return <Login onLogin={() => setIsAuthenticated(true)} />;
+    if (authView === 'register') {
+      return (
+        <Register
+          onRegisterSuccess={handleRegisterSuccess}
+          onNavigateToLogin={() => setAuthView('login')}
+        />
+      );
+    }
+    // Fallback default: Render Login component frame
+    return (
+      <Login
+        onLogin={handleLoginSuccess}
+        onNavigateToRegister={() => setAuthView('register')}
+      />
+    );
   }
 
+  // ========================================================
+  // 2. AUTHENTICATED MOSS PLATFORM SHELL (Dashboard & Feed)
+  // ========================================================
   return (
     <div className="app-shell">
-      <Navbar setView={setView} />
+      {/* Aligns 'moss.' with the feed below using the global container */}
+      <header className="page-container">
+        <Navbar setView={setView} onLogout={handleLogout} />
+      </header>
 
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 40px 60px 40px' }}>
+      {/* Standardized alignment for all main content */}
+      <main className="page-container" style={{ paddingBottom: '60px' }}>
 
-        {/* PROFILE VIEW ONLY: Show Profile Header Info */}
+        {/* PROFILE VIEW ONLY: Show Profile Header Info (passes down dynamic profile states if available) */}
         {view === 'profile' && (
-          <ProfileHeader />
+          <ProfileHeader user={userSession} />
         )}
 
         {/* SHOP VIEW ONLY: Show Upload Workspace Pipeline */}
@@ -42,7 +89,7 @@ function App() {
           </>
         )}
 
-        {/* FEED ALWAYS VISIBLE: Shows at root feed and stays anchored under elements */}
+        {/* FEED ALWAYS VISIBLE: Anchored under headers */}
         <CuratedFeed products={products} />
 
         {/* RECENT TRADES LOOP FOOTER */}
