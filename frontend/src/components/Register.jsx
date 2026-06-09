@@ -43,11 +43,11 @@ const getWelcomeEmailHTML = (username) => `
 
         <div class="signature-section">
             much love,<br>
-            <strong>udi & co-founder</strong>
+            <strong>udi & daisy</strong>
         </div>
 
         <div class="footer">
-            &copy; moss. 2026. toronto & mississauga.<br>
+            &copy; moss. 2026. toronto.<br>
             <a href="#" style="color: #999999; text-decoration: underline;">unsubscribe</a>
         </div>
     </div>
@@ -161,6 +161,40 @@ const Register = ({ onRegisterSuccess, onNavigateToLogin }) => {
         setStatusMessage('creating account container inside database context...');
 
         try {
+            // --- NEW FILE UPLOAD LOGIC ---
+            let finalAvatarUrl = null;
+
+            if (formData.profilePic) {
+                setStatusMessage('uploading profile media asset...');
+
+                // Construct a unique filename using timestamp + clean name string
+                const fileExt = formData.profilePic.name.split('.').pop();
+                const fileName = `${Date.now()}-${formData.username.replace(/\s+/g, '_').toLowerCase()}.${fileExt}`;
+                const filePath = `profiles/${fileName}`;
+
+                // Upload binary blob directly to your public 'avatars' storage container
+                const { error: uploadError } = await supabase.storage
+                    .from('avatars')
+                    .upload(filePath, formData.profilePic, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+
+                if (uploadError) {
+                    console.error("Storage pipeline error:", uploadError);
+                    setStatusMessage(`media upload failed: ${uploadError.message.toLowerCase()}`);
+                    return; // Stop flow if image fails to upload securely
+                }
+
+                // Retrieve the public absolute url string for your image asset
+                const { data: publicUrlData } = supabase.storage
+                    .from('avatars')
+                    .getPublicUrl(filePath);
+
+                finalAvatarUrl = publicUrlData.publicUrl;
+            }
+            // -----------------------------
+
             const { data, error } = await supabase.auth.signUp({
                 email: formData.email,
                 password: formData.password,
@@ -170,8 +204,8 @@ const Register = ({ onRegisterSuccess, onNavigateToLogin }) => {
                         phone: formData.phone,
                         brands_interested: formData.brandsInterested,
                         styles_aesthetics: formData.stylesAesthetics,
-                        latitude: formData.latitude,
-                        longitude: formData.longitude
+                        // Replaced the cartoon generator link with your clean storage URL string
+                        avatar_url: finalAvatarUrl
                     }
                 }
             });
@@ -181,24 +215,21 @@ const Register = ({ onRegisterSuccess, onNavigateToLogin }) => {
             } else if (data?.user) {
                 setStatusMessage('account initialized successfully!');
 
-                // --- ADDED: EMAILING ENGINE FETCH API ---
+                // --- ROUTE MAILING THROUGH LOCAL BACKEND PROXY ---
                 try {
-                    await fetch('https://api.resend.com/emails', {
+                    await fetch('http://127.0.0.1:5000/api/send-welcome', {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${import.meta.env.VITE_RESEND_API_KEY}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            from: 'moss. <onboarding@resend.dev>',
-                            to: formData.email,
-                            subject: 'welcome to moss.',
-                            html: getWelcomeEmailHTML(formData.username)
+                            username: formData.username,
+                            email: formData.email
                         })
                     });
-                    console.log("Welcome automated email successfully dispatched to Resend network context.");
+                    console.log("Onboarding dispatch requested from app backend routing pipeline.");
                 } catch (emailErr) {
-                    console.error("Mailing loop network connection failure:", emailErr);
+                    console.error("Local mailing connection error:", emailErr);
                 }
                 // --- END OF EMAIL ROUTINE ---
 
