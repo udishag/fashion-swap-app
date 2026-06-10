@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import shanzayImg from '../assets/shanzay.jpg'; // <-- Standardized lowercase extensions
-import emImg from '../assets/em.jpg';           // <-- Standardized lowercase extensions
+import shanzayImg from '../assets/shanzay.JPG'; // <-- Standardized lowercase extensions
+import emImg from '../assets/em.JPG';           // <-- Standardized lowercase extensions
 import udishaImg from '../assets/udisha.jpg';       // <-- Standardized lowercase extensions
 
 // ========================================================
