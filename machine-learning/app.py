@@ -55,7 +55,7 @@ def send_welcome():
             </div>
 
             <div class="footer">
-                &copy; moss. 2026. toronto & mississauga.<br>
+                &copy; moss. 2026. toronto.<br>
                 <a href="#" style="color: #999999; text-decoration: underline;">unsubscribe</a>
             </div>
         </div>
