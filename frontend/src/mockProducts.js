@@ -66,7 +66,7 @@ export const initialMockProducts = [
 
     {
         id: 'mock-6', // Make sure to give it a unique id string
-        title: "crean blouse",
+        title: "cream blouse",
         brand: "free people",
         credits: 0.0,
         clothImage: whitecreammodel,
