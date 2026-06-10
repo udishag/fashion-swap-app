@@ -5,46 +5,55 @@ import UploadForm from './components/UploadForm';
 import ProfileHeader from './components/ProfileHeader';
 import RecentTrades from './components/RecentTrades';
 import Login from './components/Login';
-import Register from './components/Register'; // Import the new MOSS registration component
+import Register from './components/Register';
+
+// 1. IMPORT YOUR Curated Mock Baseline Items!
+import { initialMockProducts } from './mockProducts';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // Controls dashboard login access
-  const [view, setView] = useState('feed'); // Tracks authenticated dashboard views: 'feed', 'shop', or 'profile'
-  const [authView, setAuthView] = useState('login'); // Tracks unauthenticated views: 'login' or 'register'
-  const [products, setProducts] = useState([]);
-  const [userSession, setUserSession] = useState(null); // Dynamic session storage context for database registration payload
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [view, setView] = useState('feed');
+  const [authView, setAuthView] = useState('login');
+  const [userSession, setUserSession] = useState(null);
 
-  // Sync with your Python backend database
+  // 2. SET INITIAL STATE DIRECTLY TO YOUR CURATED MOCK ITEMS
+  const [products, setProducts] = useState(initialMockProducts);
+
+  // 3. SAFE PRODUCTION BACKEND SYNC ENVIRONMENT LAYER
   useEffect(() => {
-    fetch('http://127.0.0.1:5000/api/products')
+    // Uses your secure Render live backend string, or falls back to local dev
+    const backendUrl = import.meta.env.VITE_BACKEND_API_URL || 'http://127.0.0.1:5000';
+
+    fetch(`${backendUrl}/api/products`)
       .then(res => res.json())
-      .then(data => setProducts(data))
-      .catch(err => console.error("Database connection missing:", err));
+      .then(data => {
+        if (data && data.length > 0) {
+          // Combines your user uploads dynamically on top of your mock layout items
+          setProducts([...data, ...initialMockProducts]);
+        }
+      })
+      .catch(err => {
+        console.warn("Backend sleeping or unreachable. Securely using launch assets baseline.", err);
+      });
   }, []);
 
-  // Handle successful login
   const handleLoginSuccess = (user) => {
     setUserSession(user);
     setIsAuthenticated(true);
   };
 
-  // Handle successful registration pipeline
   const handleRegisterSuccess = (newUserProfile) => {
     setUserSession(newUserProfile);
-    setIsAuthenticated(true); // Automatically logs them in upon successful sign up
+    setIsAuthenticated(true);
   };
 
-  // Immediate logout redirect reset loop
   const handleLogout = () => {
-    setIsAuthenticated(false); // Shows the unauthenticated screens
-    setAuthView('login');       // Defaults back to login layout for safety
-    setView('feed');           // Resets standard view back to default
-    setUserSession(null);      // Clears session buffer
+    setIsAuthenticated(false);
+    setAuthView('login');
+    setView('feed');
+    setUserSession(null);
   };
 
-  // ========================================================
-  // 1. UNAUTHENTICATED ROUTING LAYER (Login / Register Split)
-  // ========================================================
   if (!isAuthenticated) {
     if (authView === 'register') {
       return (
@@ -54,7 +63,6 @@ function App() {
         />
       );
     }
-    // Fallback default: Render Login component frame
     return (
       <Login
         onLogin={handleLoginSuccess}
@@ -63,36 +71,28 @@ function App() {
     );
   }
 
-  // ========================================================
-  // 2. AUTHENTICATED MOSS PLATFORM SHELL (Dashboard & Feed)
-  // ========================================================
   return (
     <div className="app-shell">
-      {/* Aligns 'moss.' with the feed below using the global container */}
       <header className="page-container">
         <Navbar setView={setView} onLogout={handleLogout} />
       </header>
 
-      {/* Standardized alignment for all main content */}
       <main className="page-container" style={{ paddingBottom: '60px' }}>
 
-        {/* PROFILE VIEW ONLY: Show Profile Header Info (passes down dynamic profile states if available) */}
         {view === 'profile' && (
           <ProfileHeader user={userSession} />
         )}
 
-        {/* SHOP VIEW ONLY: Show Upload Workspace Pipeline */}
         {view === 'shop' && (
           <>
+            {/* Prepends dynamically added items seamlessly above the grid layout */}
             <UploadForm onAddProduct={(newItem) => setProducts([newItem, ...products])} />
             <hr style={{ border: '0', height: '1px', background: '#eee', margin: '40px 0' }} />
           </>
         )}
 
-        {/* FEED ALWAYS VISIBLE: Anchored under headers */}
         <CuratedFeed products={products} />
 
-        {/* RECENT TRADES LOOP FOOTER */}
         <hr style={{ border: '0', height: '1px', background: '#eee', margin: '60px 0 40px 0' }} />
         <RecentTrades />
 

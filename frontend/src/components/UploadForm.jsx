@@ -21,6 +21,13 @@ const UploadForm = ({ onAddProduct }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // ========================================================
+        // LAUNCH WORKFLOW INTERCEPT (Bypasses network upload securely)
+        // ========================================================
+        alert("🔒 MOSS Platform Update:\nItem uploading is currently in preview mode for the launch rollout! Full database submissions will unlock shortly.");
+        return; // Exits the function right here, preserving all your future code below untouched!
+
         if (!title || !brand || !clothFile || !styledFile) {
             alert("MOSS needs a title, brand, item photo, and style match photo to list!");
             return;
@@ -37,12 +44,12 @@ const UploadForm = ({ onAddProduct }) => {
         try {
             const response = await fetch('http://127.0.0.1:5000/api/upload', {
                 method: 'POST',
-                body: formData, // Browser sets correct header type automatically
+                body: formData,
             });
 
             if (response.ok) {
                 const savedProduct = await response.json();
-                onAddProduct(savedProduct); // Updates parent state feed loop live
+                onAddProduct(savedProduct);
 
                 // Clear all states
                 setTitle(''); setBrand(''); setCredits('');
@@ -57,7 +64,13 @@ const UploadForm = ({ onAddProduct }) => {
     };
 
     return (
-        <form onSubmit={handleSubmit} style={{ maxWidth: '550px', margin: '0 auto', padding: '30px', border: '1px solid #000', borderRadius: '0px' }}>
+        <form onSubmit={handleSubmit} style={{ maxWidth: '550px', margin: '0 auto', padding: '30px', border: '1px solid #000', borderRadius: '0px', position: 'relative' }}>
+
+            {/* Minimalist Launch Badge */}
+            <div style={{ position: 'absolute', top: '15px', right: '30px', fontSize: '0.65rem', letterSpacing: '0.15em', color: '#999', textTransform: 'uppercase' }}>
+                [ PREVIEW MODE ]
+            </div>
+
             <h3 style={{ textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '20px', fontSize: '1.1rem' }}>List an Item on MOSS</h3>
 
             <div style={{ marginBottom: '15px' }}>
@@ -86,8 +99,25 @@ const UploadForm = ({ onAddProduct }) => {
                 </div>
             </div>
 
-            <button type="submit" style={{ width: '100%', padding: '12px', backgroundColor: '#000', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold', letterSpacing: '0.05em' }}>
-                PUBLISH LISTING
+            {/* Premium Grayed Out Lock Button */}
+            <button
+                type="submit"
+                style={{
+                    width: '100%',
+                    padding: '14px',
+                    backgroundColor: '#777', // Stylized dark gray
+                    color: '#fff',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    letterSpacing: '0.1em',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                }}
+            >
+                🔒 PUBLISH LISTING (PREVIEW)
             </button>
         </form>
     );
