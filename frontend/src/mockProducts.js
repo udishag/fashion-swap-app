@@ -18,6 +18,10 @@ import yellowdressstyle from './assets/yellodressstyle.jpg';
 import whitebando from './assets/whitebandomodel.jpg';
 import whitebandostyle from './assets/whitebando.jpg';
 
+//6 white cream
+import whitecreammodel from './assets/whitcreamblouse.jpg'
+import whitecreamweb from './assets/whitecreamblouseoutfit.jpg'
+
 export const initialMockProducts = [
     {
         id: 'mock-1',
@@ -58,5 +62,14 @@ export const initialMockProducts = [
         credits: 0.0,
         clothImage: whitebando,
         styledImage: whitebandostyle
+    },
+
+    {
+        id: 'mock-6', // Make sure to give it a unique id string
+        title: "crean blouse",
+        brand: "free people",
+        credits: 0.0,
+        clothImage: whitecreammodel,
+        styledImage: whitecreamweb
     }
 ];
