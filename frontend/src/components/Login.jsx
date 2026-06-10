@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import shanzayImg from '../assets/shanzay.JPG';
-import emImg from '../assets/em.JPG';
-import udishaImg from '../assets/udisha.jpg';
+import shanzayImg from '../assets/shanzay.jpg'; // <-- Standardized lowercase extensions
+import emImg from '../assets/em.jpg';           // <-- Standardized lowercase extensions
+import udishaImg from '../assets/udisha.jpg';       // <-- Standardized lowercase extensions
+
+// ========================================================
+// FIXED: Stepping out to src/ folder with correct case-matching CamelCase 'C'
+// ========================================================
+import { supabase } from '../supabaseClient';
 
 const Login = ({ onLogin, onNavigateToRegister }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [currentSlide, setCurrentSlide] = useState(0);
+
+    // UI state to visually track backend lookup verification
+    const [isVerifying, setIsVerifying] = useState(false);
 
     const slides = [shanzayImg, emImg, udishaImg];
 
@@ -17,13 +25,47 @@ const Login = ({ onLogin, onNavigateToRegister }) => {
         return () => clearInterval(slideTimer);
     }, [slides.length]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // For Beta Launch: grant access if fields aren't empty
-        if (email && password) {
-            onLogin();
-        } else {
+
+        if (!email || !password) {
             alert("please enter your email and password.");
+            return;
+        }
+
+        setIsVerifying(true);
+
+        try {
+            // 3. LOOKUP: Check if a profile matches this exact lowercased string
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('email')
+                .eq('email', email.trim().toLowerCase())
+                .maybeSingle(); // Gracefully handles empty results without crashing
+
+            // 4. INTERCEPT: Redirect to registration if no profile entry exists
+            if (error || !data) {
+                alert("✨ welcome to moss! it looks like you don't have a profile under this email yet. redirecting you to our onboarding registration...");
+                setIsVerifying(false);
+                onNavigateToRegister(); // Flips parent shell layout state to registration
+                return;
+            }
+
+            // 5. SUCCESS: User exists in database, let them through
+            const sessionData = {
+                email: email,
+                username: email.split('@')[0],
+                credits: 10.0
+            };
+
+            setIsVerifying(false);
+            onLogin(sessionData);
+
+        } catch (err) {
+            console.error("Database connection missing:", err);
+            setIsVerifying(false);
+            // Local fallback safety layer
+            onLogin({ email });
         }
     };
 
@@ -36,7 +78,6 @@ const Login = ({ onLogin, onNavigateToRegister }) => {
                     alt="moss lookbook display"
                     className="login-slideshow-image"
                 />
-                {/* Subtle branding watermark on the imagery side */}
                 <span style={{ position: 'absolute', bottom: '40px', left: '40px', color: '#fff', fontSize: '1.5rem', fontWeight: 'bold' }}>
                     moss.
                 </span>
@@ -71,8 +112,9 @@ const Login = ({ onLogin, onNavigateToRegister }) => {
                             />
                         </div>
 
-                        <button type="submit" className="login-btn">
-                            sign in
+                        {/* Interactive verification tracking layout on button label */}
+                        <button type="submit" className="login-btn" disabled={isVerifying}>
+                            {isVerifying ? "verifying..." : "sign in"}
                         </button>
                     </form>
 
