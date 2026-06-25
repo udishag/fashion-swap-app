@@ -1,126 +1,136 @@
 import React, { useState } from 'react';
+import { supabase } from '../supabaseClient';
 
-const UploadForm = ({ onAddProduct }) => {
+const BRAND_TIERS = {
+    'aritzia': 3, 'zara': 3, 'urban outfitters': 3, 'lululemon': 3,
+    'brandy melville': 3, 'reformation': 3, 'free people': 3,
+    'anthropologie': 3, 'madewell': 3, 'cos': 3, 'oak + fort': 3,
+    'alo': 3, 'alo yoga': 3, 'ba&sh': 3, 'sezane': 3,
+    'gap': 2, 'garage': 2, 'princess polly': 2, 'american eagle': 2,
+    'hollister': 2, 'abercrombie': 2, 'abercrombie & fitch': 2,
+    'uniqlo': 2, 'banana republic': 2, 'j.crew': 2, 'everlane': 2,
+    'frank and oak': 2, 'simons': 2, 'dynamite': 2, 'reitmans': 2,
+    'h&m': 1, 'shein': 1, 'walmart': 1, 'pre-owned/thrifted': 1,
+    'thrifted': 1, 'vintage': 1, 'target': 1, 'old navy': 1,
+    'forever 21': 1, 'joe fresh': 1, 'winners': 1,
+};
+
+export default function UploadForm({ userEmail, onAddProduct }) {
     const [title, setTitle] = useState('');
     const [brand, setBrand] = useState('');
     const [credits, setCredits] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [errorMsg, setErrorMsg] = useState(null);
     const [clothFile, setClothFile] = useState(null);
     const [styledFile, setStyledFile] = useState(null);
 
-    // Track visual UI preview strings separate from binary data blobs
-    const [clothPreview, setClothPreview] = useState(null);
-    const [styledPreview, setStyledPreview] = useState(null);
-
-    const handleFileChange = (e, setFile, setPreview) => {
-        const file = e.target.files[0];
-        if (file) {
-            setFile(file);
-            setPreview(URL.createObjectURL(file));
-        }
+    const handleBrandChange = (e) => {
+        const inputBrand = e.target.value;
+        setBrand(inputBrand);
+        const lowerBrand = inputBrand.toLowerCase().trim();
+        setCredits(inputBrand === '' ? '' : (BRAND_TIERS[lowerBrand] || 2).toFixed(1));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        // ========================================================
-        // LAUNCH WORKFLOW INTERCEPT (Bypasses network upload securely)
-        // ========================================================
-        alert("🔒 MOSS Platform Update:\nItem uploading is currently in preview mode for the launch rollout! Full database submissions will unlock shortly.");
-        return; // Exits the function right here, preserving all your future code below untouched!
-
+        setErrorMsg(null);
         if (!title || !brand || !clothFile || !styledFile) {
-            alert("MOSS needs a title, brand, item photo, and style match photo to list!");
+            setErrorMsg('All fields and images are required.');
             return;
         }
 
-        // Prepare multi-part network boundary submission form
-        const formData = new FormData();
-        formData.append('title', title);
-        formData.append('brand', brand);
-        formData.append('credits', credits || 0);
-        formData.append('clothImage', clothFile);
-        formData.append('styledImage', styledFile);
+        setSubmitting(true);
 
         try {
-            const response = await fetch('http://127.0.0.1:5000/api/upload', {
-                method: 'POST',
-                body: formData,
-            });
+            console.log("1. Starting upload for:", clothFile.name);
 
-            if (response.ok) {
-                const savedProduct = await response.json();
-                onAddProduct(savedProduct);
+            // 1. UPLOAD CLOTH FILE
+            const { data: clothUpload, error: clothErr } = await supabase.storage
+                .from('item-images')
+                .upload(`public/${Date.now()}_cloth_${clothFile.name}`, clothFile);
 
-                // Clear all states
-                setTitle(''); setBrand(''); setCredits('');
-                setClothFile(null); setStyledFile(null);
-                setClothPreview(null); setStyledPreview(null);
-            } else {
-                alert("Upload failed. Make sure your Python backend is running.");
-            }
-        } catch (error) {
-            console.error("Networking Pipeline Error:", error);
+            if (clothErr) throw new Error("Cloth upload failed: " + clothErr.message);
+            console.log("2. Cloth uploaded successfully:", clothUpload);
+
+            // 2. UPLOAD STYLED FILE
+            const { data: styledUpload, error: styledErr } = await supabase.storage
+                .from('item-images')
+                .upload(`public/${Date.now()}_styled_${styledFile.name}`, styledFile);
+
+            if (styledErr) throw new Error("Styled upload failed: " + styledErr.message);
+            console.log("3. Styled uploaded successfully:", styledUpload);
+
+            // 3. GET PUBLIC URLS
+            const { data: clothData } = supabase.storage.from('item-images').getPublicUrl(clothUpload.path);
+            const { data: styledData } = supabase.storage.from('item-images').getPublicUrl(styledUpload.path);
+
+            // 4. GET PROFILE ID
+            const { data: profileRow, error: profileErr } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('username', userEmail.trim().toLowerCase())
+                .maybeSingle();
+
+            if (profileErr || !profileRow) throw new Error('Could not find your profile.');
+
+            console.log("4. Inserting into DB with URLs:", clothData.publicUrl, styledData.publicUrl);
+
+            // 5. INSERT INTO DB
+            const { data: newItem, error: insertErr } = await supabase
+                .from('items')
+                .insert({
+                    uploaded_by: profileRow.id,
+                    title,
+                    brand: brand.trim().toLowerCase(),
+                    credits: parseFloat(credits) || 0.0,
+                    cloth_image_url: clothData.publicUrl,
+                    styled_image_url: styledData.publicUrl,
+                    is_mock: false,
+                })
+                .select()
+                .single();
+
+            if (insertErr) throw insertErr;
+
+            console.log("5. Insert Successful!");
+            alert("Listing published successfully!");
+            setTitle(''); setBrand(''); setCredits(''); setClothFile(null); setStyledFile(null);
+            onAddProduct?.(newItem);
+
+        } catch (err) {
+            console.error(">>> FULL UPLOAD ERROR CAUGHT <<< :", err);
+            setErrorMsg(err.message);
+        } finally {
+            setSubmitting(false);
         }
     };
 
     return (
-        <form onSubmit={handleSubmit} style={{ maxWidth: '550px', margin: '0 auto', padding: '30px', border: '1px solid #000', borderRadius: '0px', position: 'relative' }}>
-
-            {/* Minimalist Launch Badge */}
-            <div style={{ position: 'absolute', top: '15px', right: '30px', fontSize: '0.65rem', letterSpacing: '0.15em', color: '#999', textTransform: 'uppercase' }}>
-                [ PREVIEW MODE ]
+        <div style={{ border: '1px solid #111', padding: '40px', maxWidth: '600px', marginBottom: '40px', backgroundColor: '#fff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', letterSpacing: '0.1em', margin: 0 }}>LIST AN ITEM ON MOSS</h3>
+                <span style={{ fontSize: '0.75rem', color: '#9ca3af', letterSpacing: '0.1em' }}>[ PREVIEW MODE ]</span>
             </div>
+            <form onSubmit={handleSubmit}>
+                <input type="text" placeholder="item name" value={title} onChange={(e) => setTitle(e.target.value)} style={{ width: '100%', padding: '12px', marginBottom: '16px', border: '1px solid #e5e7eb', borderRadius: '4px', outline: 'none' }} required />
+                <input type="text" placeholder="brand" value={brand} onChange={handleBrandChange} style={{ width: '100%', padding: '12px', marginBottom: '16px', border: '1px solid #e5e7eb', borderRadius: '4px', outline: 'none' }} required />
+                <input type="text" value={credits} readOnly style={{ width: '100%', padding: '12px', marginBottom: '16px', backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '4px', color: '#6b7280', outline: 'none' }} />
 
-            <h3 style={{ textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '20px', fontSize: '1.1rem' }}>List an Item on MOSS</h3>
-
-            <div style={{ marginBottom: '15px' }}>
-                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="ITEM NAME" style={{ width: '100%', padding: '10px', border: '1px solid #ccc', outline: 'none' }} />
-            </div>
-
-            <div style={{ marginBottom: '15px' }}>
-                <input type="text" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="BRAND (e.g. Aritzia, Vintage)" style={{ width: '100%', padding: '10px', border: '1px solid #ccc', outline: 'none' }} />
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-                <input type="number" step="0.1" value={credits} onChange={(e) => setCredits(e.target.value)} placeholder="CREDIT VALUE (e.g. 3.0)" style={{ width: '100%', padding: '10px', border: '1px solid #ccc', outline: 'none' }} />
-            </div>
-
-            <div style={{ display: 'flex', gap: '20px', marginBottom: '25px' }}>
-                <div style={{ flex: 1, border: '1px dashed #ccc', padding: '10px', textAlign: 'center' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>1. CLOTH LAY</label>
-                    <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, setClothFile, setClothPreview)} style={{ width: '100%', fontSize: '0.7rem' }} />
-                    {clothPreview && <img src={clothPreview} alt="Lay preview" style={{ width: '100%', height: '120px', objectFit: 'cover', marginTop: '10px' }} />}
+                <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+                    <div style={{ flex: 1, border: '1px dashed #d1d5db', padding: '20px', textAlign: 'center', borderRadius: '4px' }}>
+                        <p style={{ fontSize: '0.8rem', marginBottom: '8px', fontWeight: '600' }}>1. cloth lay</p>
+                        <input type="file" accept="image/*" onChange={(e) => setClothFile(e.target.files[0])} style={{ fontSize: '0.75rem' }} required />
+                    </div>
+                    <div style={{ flex: 1, border: '1px dashed #d1d5db', padding: '20px', textAlign: 'center', borderRadius: '4px' }}>
+                        <p style={{ fontSize: '0.8rem', marginBottom: '8px', fontWeight: '600' }}>2. user styled</p>
+                        <input type="file" accept="image/*" onChange={(e) => setStyledFile(e.target.files[0])} style={{ fontSize: '0.75rem' }} required />
+                    </div>
                 </div>
-
-                <div style={{ flex: 1, border: '1px dashed #ccc', padding: '10px', textAlign: 'center' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>2. USER STYLED</label>
-                    <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, setStyledFile, setStyledPreview)} style={{ width: '100%', fontSize: '0.7rem' }} />
-                    {styledPreview && <img src={styledPreview} alt="Styled preview" style={{ width: '100%', height: '120px', objectFit: 'cover', marginTop: '10px' }} />}
-                </div>
-            </div>
-
-            {/* Premium Grayed Out Lock Button */}
-            <button
-                type="submit"
-                style={{
-                    width: '100%',
-                    padding: '14px',
-                    backgroundColor: '#777', // Stylized dark gray
-                    color: '#fff',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    letterSpacing: '0.1em',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px'
-                }}
-            >
-                🔒 PUBLISH LISTING (PREVIEW)
-            </button>
-        </form>
+                {errorMsg && <p style={{ color: '#b91c1c', fontSize: '0.8rem', marginBottom: '16px' }}>{errorMsg}</p>}
+                <button type="submit" disabled={submitting} style={{ width: '100%', padding: '14px', backgroundColor: '#4b5563', color: 'white', border: 'none', fontWeight: 'bold', letterSpacing: '0.05em', cursor: submitting ? 'not-allowed' : 'pointer' }}>
+                    {submitting ? 'uploading...' : 'publish listing'}
+                </button>
+            </form>
+        </div>
     );
-};
-
-export default UploadForm;
+}

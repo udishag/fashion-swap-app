@@ -39,8 +39,8 @@ const Login = ({ onLogin, onNavigateToRegister }) => {
             // 3. LOOKUP: Check if a profile matches this exact lowercased string
             const { data, error } = await supabase
                 .from('profiles')
-                .select('email')
-                .eq('email', email.trim().toLowerCase())
+                .select('username')
+                .eq('username', email.trim().toLowerCase())
                 .maybeSingle(); // Gracefully handles empty results without crashing
 
             // 4. INTERCEPT: Redirect to registration if no profile entry exists

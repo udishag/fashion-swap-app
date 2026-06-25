@@ -1,26 +1,23 @@
-// 1. SKIRT ONE ASSETS: Ruched soft chiffon
+// frontend/src/mockProducts.js
+//
+// CHANGE FROM YOUR VERSION: added a `style` field to each item, chosen
+// from your 6 signup tags (90s archival, clean girl, coquette, minimalist,
+// streetwear, vintage). I picked these based on each item's title/vibe —
+// double check they actually match the photos and adjust if needed, since
+// I can't see the actual images.
+
 import chiffmodel from './assets/chiffmodel.png';
 import chiffskirt from './assets/chiffskirt.jpg';
-
-// 2. SKIRT TWO ASSETS: Pinstripe tailored micro
 import minimodel from './assets/minimodel.jpg';
 import miniskirt from './assets/miniskirt.jpg';
-
-// 3. SKIRT THREE ASSETS: Asymmetrical plaid maxi
 import pinkstripemodel from './assets/pinkstripemodel.jpg';
 import pinkstripestyled from './assets/pinkstripestyled.jpg';
-
-// 4. YELLOW DRESS ASSETS: Checked straight from your sidebar
 import yellowdress from './assets/yellowdressmodel.jpg';
 import yellowdressstyle from './assets/yellodressstyle.jpg';
-
-// 5. WHITE BANDO ASSETS: Checked straight from your sidebar
 import whitebando from './assets/whitebandomodel.jpg';
 import whitebandostyle from './assets/whitebando.jpg';
-
-//6 white cream
-import whitecreammodel from './assets/whitcreamblouse.jpg'
-import whitecreamweb from './assets/whitecreamblouseoutfit.jpg'
+import whitecreammodel from './assets/whitcreamblouse.jpg';
+import whitecreamweb from './assets/whitecreamblouseoutfit.jpg';
 
 export const initialMockProducts = [
     {
@@ -29,7 +26,9 @@ export const initialMockProducts = [
         brand: "zara",
         credits: 0.0,
         clothImage: chiffmodel,
-        styledImage: chiffskirt
+        styledImage: chiffskirt,
+        is_mock: true,
+        style: "coquette",
     },
     {
         id: 'mock-2',
@@ -37,7 +36,9 @@ export const initialMockProducts = [
         brand: "aritzia",
         credits: 0.0,
         clothImage: minimodel,
-        styledImage: miniskirt
+        styledImage: miniskirt,
+        is_mock: true,
+        style: "90s archival",
     },
     {
         id: 'mock-3',
@@ -45,7 +46,9 @@ export const initialMockProducts = [
         brand: "brandy melville",
         credits: 0.0,
         clothImage: pinkstripestyled,
-        styledImage: pinkstripemodel
+        styledImage: pinkstripemodel,
+        is_mock: true,
+        style: "vintage",
     },
     {
         id: 'mock-4',
@@ -53,7 +56,9 @@ export const initialMockProducts = [
         brand: "uniqlo",
         credits: 0.0,
         clothImage: yellowdressstyle,
-        styledImage: yellowdress
+        styledImage: yellowdress,
+        is_mock: true,
+        style: "minimalist",
     },
     {
         id: 'mock-5',
@@ -61,15 +66,18 @@ export const initialMockProducts = [
         brand: "uniqlo",
         credits: 0.0,
         clothImage: whitebando,
-        styledImage: whitebandostyle
+        styledImage: whitebandostyle,
+        is_mock: true,
+        style: "clean girl",
     },
-
     {
-        id: 'mock-6', // Make sure to give it a unique id string
+        id: 'mock-6',
         title: "cream blouse",
         brand: "free people",
         credits: 0.0,
         clothImage: whitecreammodel,
-        styledImage: whitecreamweb
+        styledImage: whitecreamweb,
+        is_mock: true,
+        style: "clean girl",
     }
 ];
