@@ -15,7 +15,7 @@ const BRAND_TIERS = {
     'forever 21': 1, 'joe fresh': 1, 'winners': 1,
 };
 
-export default function UploadForm({ userEmail, onAddProduct }) {
+export default function UploadForm({ onAddProduct }) {
     const [title, setTitle] = useState('');
     const [brand, setBrand] = useState('');
     const [credits, setCredits] = useState('');
@@ -44,42 +44,31 @@ export default function UploadForm({ userEmail, onAddProduct }) {
         try {
             console.log("1. Starting upload for:", clothFile.name);
 
-            // 1. UPLOAD CLOTH FILE
             const { data: clothUpload, error: clothErr } = await supabase.storage
                 .from('item-images')
                 .upload(`public/${Date.now()}_cloth_${clothFile.name}`, clothFile);
-
             if (clothErr) throw new Error("Cloth upload failed: " + clothErr.message);
             console.log("2. Cloth uploaded successfully:", clothUpload);
 
-            // 2. UPLOAD STYLED FILE
             const { data: styledUpload, error: styledErr } = await supabase.storage
                 .from('item-images')
                 .upload(`public/${Date.now()}_styled_${styledFile.name}`, styledFile);
-
             if (styledErr) throw new Error("Styled upload failed: " + styledErr.message);
             console.log("3. Styled uploaded successfully:", styledUpload);
 
-            // 3. GET PUBLIC URLS
             const { data: clothData } = supabase.storage.from('item-images').getPublicUrl(clothUpload.path);
             const { data: styledData } = supabase.storage.from('item-images').getPublicUrl(styledUpload.path);
 
-            // 4. GET PROFILE ID
-            const { data: profileRow, error: profileErr } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('username', userEmail.trim().toLowerCase())
-                .maybeSingle();
-
-            if (profileErr || !profileRow) throw new Error('Could not find your profile.');
+            // GET REAL AUTH USER — this is the auth.uid() that the RLS policy checks
+            const { data: authData, error: authErr } = await supabase.auth.getUser();
+            if (authErr || !authData?.user) throw new Error('You must be logged in to upload.');
 
             console.log("4. Inserting into DB with URLs:", clothData.publicUrl, styledData.publicUrl);
 
-            // 5. INSERT INTO DB
             const { data: newItem, error: insertErr } = await supabase
                 .from('items')
                 .insert({
-                    uploaded_by: profileRow.id,
+                    uploaded_by: authData.user.id,
                     title,
                     brand: brand.trim().toLowerCase(),
                     credits: parseFloat(credits) || 0.0,

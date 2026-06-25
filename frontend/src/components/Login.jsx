@@ -1,20 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import shanzayImg from '../assets/shanzay.JPG'; // <-- Standardized lowercase extensions
-import emImg from '../assets/em.JPG';           // <-- Standardized lowercase extensions
-import udishaImg from '../assets/udisha.jpg';       // <-- Standardized lowercase extensions
-
-// ========================================================
-// FIXED: Stepping out to src/ folder with correct case-matching CamelCase 'C'
-// ========================================================
+import shanzayImg from '../assets/shanzay.JPG';
+import emImg from '../assets/em.JPG';
+import udishaImg from '../assets/udisha.jpg';
 import { supabase } from '../supabaseClient';
 
 const Login = ({ onLogin, onNavigateToRegister }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [currentSlide, setCurrentSlide] = useState(0);
-
-    // UI state to visually track backend lookup verification
     const [isVerifying, setIsVerifying] = useState(false);
+    const [errorMsg, setErrorMsg] = useState(null);
 
     const slides = [shanzayImg, emImg, udishaImg];
 
@@ -27,6 +22,7 @@ const Login = ({ onLogin, onNavigateToRegister }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setErrorMsg(null);
 
         if (!email || !password) {
             alert("please enter your email and password.");
@@ -35,43 +31,28 @@ const Login = ({ onLogin, onNavigateToRegister }) => {
 
         setIsVerifying(true);
 
-        try {
-            // 3. LOOKUP: Check if a profile matches this exact lowercased string
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('username')
-                .eq('username', email.trim().toLowerCase())
-                .maybeSingle(); // Gracefully handles empty results without crashing
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email.trim().toLowerCase(),
+            password,
+        });
 
-            // 4. INTERCEPT: Redirect to registration if no profile entry exists
-            if (error || !data) {
-                alert("✨ welcome to moss! it looks like you don't have a profile under this email yet. redirecting you to our onboarding registration...");
-                setIsVerifying(false);
-                onNavigateToRegister(); // Flips parent shell layout state to registration
-                return;
+        setIsVerifying(false);
+
+        if (error) {
+            if (error.message.toLowerCase().includes('invalid login credentials')) {
+                alert("no account found with those details — redirecting you to sign up.");
+                onNavigateToRegister();
+            } else {
+                setErrorMsg(error.message);
             }
-
-            // 5. SUCCESS: User exists in database, let them through
-            const sessionData = {
-                email: email,
-                username: email.split('@')[0],
-                credits: 10.0
-            };
-
-            setIsVerifying(false);
-            onLogin(sessionData);
-
-        } catch (err) {
-            console.error("Database connection missing:", err);
-            setIsVerifying(false);
-            // Local fallback safety layer
-            onLogin({ email });
+            return;
         }
+
+        onLogin({ id: data.user.id, email: data.user.email });
     };
 
     return (
         <div className="login-split-container">
-            {/* Left 50%: Lookbook Slide Rotation */}
             <div className="login-slideshow-half">
                 <img
                     src={slides[currentSlide]}
@@ -83,7 +64,6 @@ const Login = ({ onLogin, onNavigateToRegister }) => {
                 </span>
             </div>
 
-            {/* Right 50%: Functional Auth Window */}
             <div className="login-form-half">
                 <div className="login-form-wrapper">
                     <h2 className="login-header">login</h2>
@@ -112,7 +92,8 @@ const Login = ({ onLogin, onNavigateToRegister }) => {
                             />
                         </div>
 
-                        {/* Interactive verification tracking layout on button label */}
+                        {errorMsg && <p style={{ color: '#b91c1c', fontSize: '0.8rem', marginBottom: '12px' }}>{errorMsg}</p>}
+
                         <button type="submit" className="login-btn" disabled={isVerifying}>
                             {isVerifying ? "verifying..." : "sign in"}
                         </button>

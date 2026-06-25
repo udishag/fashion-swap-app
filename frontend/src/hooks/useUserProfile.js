@@ -14,62 +14,48 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 
-export function useUserProfile(email) {
+export function useUserProfile(userId) {
     const [profile, setProfile] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
 
     useEffect(() => {
-        if (!email) return
+        if (!userId) return
 
         let cancelled = false
         setLoading(true)
 
         async function load() {
-            const cleanEmail = email.trim().toLowerCase()
-
-            // 1. Get the stated profile row by email
             const { data: profileRow, error: profileErr } = await supabase
                 .from('profiles')
                 .select('id, brands_interested, style_preferences, has_premium, lat, lon')
-                .eq('email', cleanEmail)
+                .eq('id', userId)
                 .maybeSingle()
 
             if (profileErr || !profileRow) {
-                if (!cancelled) {
-                    setError(profileErr?.message ?? 'no profile found')
-                    setLoading(false)
-                }
+                if (!cancelled) { setError(profileErr?.message ?? 'no profile found'); setLoading(false) }
                 return
             }
 
-            // 2. Compute uploaded_brands live from the items table, keyed
-            // by the profile's real id (uploaded_by still uses the UUID
-            // primary key from profiles, not the email).
             const { data: uploadedItems, error: itemsErr } = await supabase
                 .from('items')
                 .select('brand')
                 .eq('uploaded_by', profileRow.id)
 
             if (itemsErr) {
-                if (!cancelled) {
-                    setError(itemsErr.message)
-                    setLoading(false)
-                }
+                if (!cancelled) { setError(itemsErr.message); setLoading(false) }
                 return
             }
 
-            const uploaded_brands = (uploadedItems ?? []).map(i => i.brand)
-
             if (!cancelled) {
-                setProfile({ ...profileRow, uploaded_brands })
+                setProfile({ ...profileRow, uploaded_brands: (uploadedItems ?? []).map(i => i.brand) })
                 setLoading(false)
             }
         }
 
         load()
         return () => { cancelled = true }
-    }, [email])
+    }, [userId])
 
     return { profile, loading, error }
 }

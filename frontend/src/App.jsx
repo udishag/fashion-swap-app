@@ -40,13 +40,10 @@ function App() {
   const [userSession, setUserSession] = useState(null);
   const [realItems, setRealItems] = useState([]);
 
-  // Looked up by email since userSession.email is what Login.jsx actually
-  // gives us — there's no real Supabase auth UUID in play here.
-  const { profile, loading: profileLoading } = useUserProfile(userSession?.email);
+  // Looked up by the real Supabase auth UUID now that Login/Register use
+  // actual supabase.auth sessions (signInWithPassword / signUp).
+  const { profile, loading: profileLoading } = useUserProfile(userSession?.id);
 
-  // Pull real uploaded items from Supabase. Falls back silently to mock-only
-  // if the items table is empty or unreachable — same safety behavior as
-  // your original backend fetch.
   useEffect(() => {
     supabase
       .from('items')
@@ -64,7 +61,7 @@ function App() {
   const products = [
     ...realItems.map(item => ({
       id: item.id,
-      uploaded_by: item.uploaded_by, // Needed for the ownership check
+      uploaded_by: item.uploaded_by,
       title: item.title,
       brand: item.brand,
       credits: item.credits,
@@ -112,10 +109,9 @@ function App() {
     );
   }
 
-  // Built fresh from real Supabase profile data once it loads. Falls back
-  // to empty arrays/false so useMossScores never crashes on undefined.
   const userForScoring = {
     email: userSession?.email,
+    id: userSession?.id,
     brands_interested: profile?.brands_interested ?? [],
     style_preferences: profile?.style_preferences ?? [],
     has_premium: profile?.has_premium ?? false,
@@ -139,14 +135,12 @@ function App() {
         {view === 'shop' && (
           <>
             <UploadForm
-              userEmail={userSession?.email}
               onAddProduct={(newItem) => setRealItems([newItem, ...realItems])}
             />
             <hr style={{ border: '0', height: '1px', background: '#eee', margin: '40px 0' }} />
           </>
         )}
 
-        {/* UPDATED: Added currentUserId prop below */}
         <CuratedFeed
           products={products}
           user={userForScoring}
