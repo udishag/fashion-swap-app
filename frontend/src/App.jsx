@@ -43,6 +43,25 @@ function App() {
   // Looked up by the real Supabase auth UUID now that Login/Register use
   // actual supabase.auth sessions (signInWithPassword / signUp).
   const { profile, loading: profileLoading } = useUserProfile(userSession?.id);
+  useEffect(() => {
+    // 1. Check if they are already logged in when the page refreshes
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setUserSession(session.user);
+        setIsAuthenticated(true);
+      }
+    });
+
+    // 2. Listen for actual logouts so they don't get booted accidentally
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setIsAuthenticated(false);
+        setUserSession(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     supabase
