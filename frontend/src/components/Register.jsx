@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Register.css';
 
 // Import the client backend integration logic smoothly
-import { supabase } from './supabaseClient';
+import { supabase } from '../supabaseClient';
 
 // Import your asset graphic using native JavaScript routing to avoid path breaking
 import registerPhoto from '../assets/registerPhoto.jpeg';
