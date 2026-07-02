@@ -4,9 +4,10 @@ import emImg from '../assets/em.JPG';
 import udishaImg from '../assets/udisha.jpg';
 import { supabase } from '../supabaseClient';
 
-const Login = ({ onLogin, onNavigateToRegister }) => {
+const Login = ({ onLogin, onNavigateToRegister, onNavigateToForgot }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isVerifying, setIsVerifying] = useState(false);
     const [errorMsg, setErrorMsg] = useState(null);
@@ -40,8 +41,7 @@ const Login = ({ onLogin, onNavigateToRegister }) => {
 
         if (error) {
             if (error.message.toLowerCase().includes('invalid login credentials')) {
-                alert("no account found with those details — redirecting you to sign up.");
-                onNavigateToRegister();
+                setErrorMsg("invalid email or password. (if you just signed up, make sure you verified your email!)");
             } else {
                 setErrorMsg(error.message);
             }
@@ -81,15 +81,41 @@ const Login = ({ onLogin, onNavigateToRegister }) => {
                             />
                         </div>
 
-                        <div className="input-group">
+                        <div className="input-group" style={{ position: 'relative' }}>
                             <label>password</label>
                             <input
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
                                 required
+                                style={{ paddingRight: '60px' }}
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={{
+                                    position: 'absolute',
+                                    right: '10px',
+                                    top: '35px',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontSize: '0.85rem',
+                                    color: '#666'
+                                }}
+                            >
+                                {showPassword ? "hide" : "show"}
+                            </button>
+                        </div>
+
+                        <div style={{ textAlign: 'right', marginTop: '4px', marginBottom: '12px' }}>
+                            <span
+                                onClick={onNavigateToForgot}
+                                style={{ fontSize: '0.8rem', cursor: 'pointer', color: '#666', textDecoration: 'underline' }}
+                            >
+                                forgot password?
+                            </span>
                         </div>
 
                         {errorMsg && <p style={{ color: '#b91c1c', fontSize: '0.8rem', marginBottom: '12px' }}>{errorMsg}</p>}

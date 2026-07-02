@@ -28,9 +28,10 @@ import ProfileHeader from './components/ProfileHeader';
 import RecentTrades from './components/RecentTrades';
 import Login from './components/Login';
 import Register from './components/Register';
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
 import { supabase } from './supabaseClient';
 import { useUserProfile } from './hooks/useUserProfile';
-
 import { initialMockProducts } from './mockProducts';
 
 function App() {
@@ -40,11 +41,9 @@ function App() {
   const [userSession, setUserSession] = useState(null);
   const [realItems, setRealItems] = useState([]);
 
-  // Looked up by the real Supabase auth UUID now that Login/Register use
-  // actual supabase.auth sessions (signInWithPassword / signUp).
   const { profile, loading: profileLoading } = useUserProfile(userSession?.id);
+
   useEffect(() => {
-    // 1. Check if they are already logged in when the page refreshes
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setUserSession(session.user);
@@ -52,11 +51,14 @@ function App() {
       }
     });
 
-    // 2. Listen for actual logouts so they don't get booted accidentally
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
         setUserSession(null);
+      } else if (event === 'PASSWORD_RECOVERY') {
+        // This catches the user returning from the email link
+        setIsAuthenticated(false);
+        setAuthView('reset-password');
       }
     });
 
@@ -120,10 +122,18 @@ function App() {
         />
       );
     }
+    if (authView === 'forgot-password') {
+      return <ForgotPassword onNavigateToLogin={() => setAuthView('login')} />;
+    }
+    if (authView === 'reset-password') {
+      return <ResetPassword onNavigateToLogin={() => setAuthView('login')} />;
+    }
+
     return (
       <Login
         onLogin={handleLoginSuccess}
         onNavigateToRegister={() => setAuthView('register')}
+        onNavigateToForgot={() => setAuthView('forgot-password')}
       />
     );
   }
@@ -146,7 +156,6 @@ function App() {
       </header>
 
       <main className="page-container" style={{ paddingBottom: '60px' }}>
-
         {view === 'profile' && (
           <ProfileHeader user={userForScoring} />
         )}
@@ -168,7 +177,6 @@ function App() {
 
         <hr style={{ border: '0', height: '1px', background: '#eee', margin: '60px 0 40px 0' }} />
         <RecentTrades />
-
       </main>
     </div>
   );
