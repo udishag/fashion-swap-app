@@ -13,7 +13,7 @@ const ForgotPassword = ({ onNavigateToLogin }) => {
 
         const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
             // IMPORTANT: Change this to your Vercel URL when deploying (e.g., 'https://moss-exchange.vercel.app/')
-            redirectTo: 'http://localhost:5173/',
+            redirectTo: 'https://moss-exchange.vercel.app/',
         });
 
         setIsLoading(false);
