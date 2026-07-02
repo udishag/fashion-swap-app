@@ -13,6 +13,12 @@ import MatchScore from './MatchScore';
 const ProductCard = ({ product, matchData, currentUserId }) => {
     const [hovered, setHovered] = useState(false);
 
+
+    // Security Check: Only the creator of the listing or the Admin can delete
+    const isAdmin = currentUserEmail === 'udimoss@gmail.com';
+    const isCreator = currentUserId === product.user_id;
+    const canDelete = !product.is_mock && (isCreator || isAdmin);
+
     const handleDelete = async (e) => {
         e.stopPropagation(); // Prevents clicking the card background
         if (!window.confirm("Are you sure you want to delete this listing?")) return;

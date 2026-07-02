@@ -6,6 +6,10 @@
 // `user` prop through to scoring + a `matchData` prop down to each
 // ProductCard. Your existing layout/grid styling is completely unchanged.
 
+// ────────────────────────────────────────────────────────────────────────────
+// FILE LOCATION: frontend/src/components/CuratedFeed.jsx
+// ────────────────────────────────────────────────────────────────────────────
+
 import React from 'react';
 import ProductCard from './ProductCard';
 import { useMossScores } from '../hooks/useMossScores';
@@ -36,6 +40,10 @@ const CuratedFeed = ({ products, user, currentUserId }) => {
                         // Passes the exact score returned from app.py
                         matchData={!loading ? getScore(product.id) : null}
                         currentUserId={currentUserId}
+
+                        // NEW LINE: This tells the ProductCard exactly who is looking at it
+                        // so it knows whether to show the delete button or not!
+                        currentUserEmail={user?.email}
                     />
                 ))}
             </div>
