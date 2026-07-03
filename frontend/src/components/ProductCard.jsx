@@ -10,7 +10,7 @@ import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import MatchScore from './MatchScore';
 
-const ProductCard = ({ product, matchData, currentUserId }) => {
+const ProductCard = ({ product, matchData, currentUserId, currentUserEmail }) => {
     const [hovered, setHovered] = useState(false);
 
 
