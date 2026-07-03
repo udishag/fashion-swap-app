@@ -6,13 +6,16 @@
 // the brand/credits line. Accepts a new `matchData` prop from CuratedFeed.
 // Your hover image swap behavior is completely unchanged.
 
+// ────────────────────────────────────────────────────────────────────────────
+// FILE LOCATION: frontend/src/components/ProductCard.jsx (replaces existing)
+// ────────────────────────────────────────────────────────────────────────────
+
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import MatchScore from './MatchScore';
 
 const ProductCard = ({ product, matchData, currentUserId, currentUserEmail }) => {
     const [hovered, setHovered] = useState(false);
-
 
     // Security Check: Only the creator of the listing or the Admin can delete
     const isAdmin = currentUserEmail === 'udimoss@gmail.com';
@@ -50,8 +53,8 @@ const ProductCard = ({ product, matchData, currentUserId, currentUserEmail }) =>
                     alt={product.title}
                 />
 
-                {/* DELETE BUTTON: Only show if NOT a mock AND owner matches */}
-                {!product.is_mock && (
+                {/* DELETE BUTTON: Only show if user passes security check */}
+                {canDelete && (
                     <button
                         onClick={handleDelete}
                         style={{
