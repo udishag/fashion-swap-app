@@ -19,6 +19,10 @@ export default function UploadForm({ onAddProduct }) {
     const [title, setTitle] = useState('');
     const [brand, setBrand] = useState('');
     const [credits, setCredits] = useState('');
+    const [size, setSize] = useState('S');
+    const [categoryGender, setCategoryGender] = useState('Womenswear');
+    const [color, setColor] = useState('');
+    const [condition, setCondition] = useState('Excellent');
     const [submitting, setSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState(null);
     const [clothFile, setClothFile] = useState(null);
@@ -42,28 +46,21 @@ export default function UploadForm({ onAddProduct }) {
         setSubmitting(true);
 
         try {
-            console.log("1. Starting upload for:", clothFile.name);
-
             const { data: clothUpload, error: clothErr } = await supabase.storage
                 .from('item-images')
                 .upload(`public/${Date.now()}_cloth_${clothFile.name}`, clothFile);
             if (clothErr) throw new Error("Cloth upload failed: " + clothErr.message);
-            console.log("2. Cloth uploaded successfully:", clothUpload);
 
             const { data: styledUpload, error: styledErr } = await supabase.storage
                 .from('item-images')
                 .upload(`public/${Date.now()}_styled_${styledFile.name}`, styledFile);
             if (styledErr) throw new Error("Styled upload failed: " + styledErr.message);
-            console.log("3. Styled uploaded successfully:", styledUpload);
 
             const { data: clothData } = supabase.storage.from('item-images').getPublicUrl(clothUpload.path);
             const { data: styledData } = supabase.storage.from('item-images').getPublicUrl(styledUpload.path);
 
-            // GET REAL AUTH USER — this is the auth.uid() that the RLS policy checks
             const { data: authData, error: authErr } = await supabase.auth.getUser();
             if (authErr || !authData?.user) throw new Error('You must be logged in to upload.');
-
-            console.log("4. Inserting into DB with URLs:", clothData.publicUrl, styledData.publicUrl);
 
             const { data: newItem, error: insertErr } = await supabase
                 .from('items')
@@ -72,6 +69,10 @@ export default function UploadForm({ onAddProduct }) {
                     title,
                     brand: brand.trim().toLowerCase(),
                     credits: parseFloat(credits) || 0.0,
+                    size,
+                    category_gender: categoryGender,
+                    color: color.trim().toLowerCase() || 'multi',
+                    condition,
                     cloth_image_url: clothData.publicUrl,
                     styled_image_url: styledData.publicUrl,
                     is_mock: false,
@@ -81,13 +82,12 @@ export default function UploadForm({ onAddProduct }) {
 
             if (insertErr) throw insertErr;
 
-            console.log("5. Insert Successful!");
-            alert("Listing published successfully!");
-            setTitle(''); setBrand(''); setCredits(''); setClothFile(null); setStyledFile(null);
+            alert("Listing published successfully with fit metadata!");
+            setTitle(''); setBrand(''); setCredits(''); setColor(''); setClothFile(null); setStyledFile(null);
             onAddProduct?.(newItem);
 
         } catch (err) {
-            console.error(">>> FULL UPLOAD ERROR CAUGHT <<< :", err);
+            console.error("Upload error caught:", err);
             setErrorMsg(err.message);
         } finally {
             setSubmitting(false);
@@ -98,12 +98,45 @@ export default function UploadForm({ onAddProduct }) {
         <div style={{ border: '1px solid #111', padding: '40px', maxWidth: '600px', marginBottom: '40px', backgroundColor: '#fff' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', letterSpacing: '0.1em', margin: 0 }}>LIST AN ITEM ON MOSS</h3>
-                <span style={{ fontSize: '0.75rem', color: '#9ca3af', letterSpacing: '0.1em' }}>[ PREVIEW MODE ]</span>
+                <span style={{ fontSize: '0.75rem', color: '#9ca3af', letterSpacing: '0.1em' }}>[ FIT PREDICTOR COMPATIBLE ]</span>
             </div>
             <form onSubmit={handleSubmit}>
                 <input type="text" placeholder="item name" value={title} onChange={(e) => setTitle(e.target.value)} style={{ width: '100%', padding: '12px', marginBottom: '16px', border: '1px solid #e5e7eb', borderRadius: '4px', outline: 'none' }} required />
-                <input type="text" placeholder="brand" value={brand} onChange={handleBrandChange} style={{ width: '100%', padding: '12px', marginBottom: '16px', border: '1px solid #e5e7eb', borderRadius: '4px', outline: 'none' }} required />
-                <input type="text" value={credits} readOnly style={{ width: '100%', padding: '12px', marginBottom: '16px', backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '4px', color: '#6b7280', outline: 'none' }} />
+
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                    <input type="text" placeholder="brand" value={brand} onChange={handleBrandChange} style={{ flex: 2, padding: '12px', border: '1px solid #e5e7eb', borderRadius: '4px', outline: 'none' }} required />
+                    <input type="text" value={credits ? `${credits} cr` : ''} readOnly placeholder="credits" style={{ flex: 1, padding: '12px', backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '4px', color: '#6b7280', outline: 'none' }} />
+                </div>
+
+                {/* NEW METADATA INPUT ROW */}
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                    <select value={size} onChange={(e) => setSize(e.target.value)} style={{ flex: 1, padding: '12px', border: '1px solid #e5e7eb', borderRadius: '4px', backgroundColor: '#fff' }}>
+                        <option value="XXS">Size XXS</option>
+                        <option value="XS">Size XS</option>
+                        <option value="S">Size S</option>
+                        <option value="M">Size M</option>
+                        <option value="L">Size L</option>
+                        <option value="XL">Size XL</option>
+                        <option value="PLUS SIZE">Size Plus</option>
+
+                    </select>
+
+                    <select value={categoryGender} onChange={(e) => setCategoryGender(e.target.value)} style={{ flex: 1, padding: '12px', border: '1px solid #e5e7eb', borderRadius: '4px', backgroundColor: '#fff' }}>
+                        <option value="Womenswear">Womenswear</option>
+                        <option value="Menswear">Menswear</option>
+                        <option value="Unisex">Unisex</option>
+                    </select>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                    <input type="text" placeholder="color (e.g. pink, washed denim)" value={color} onChange={(e) => setColor(e.target.value)} style={{ flex: 1, padding: '12px', border: '1px solid #e5e7eb', borderRadius: '4px', outline: 'none' }} />
+                    <select value={condition} onChange={(e) => setCondition(e.target.value)} style={{ flex: 1, padding: '12px', border: '1px solid #e5e7eb', borderRadius: '4px', backgroundColor: '#fff' }}>
+                        <option value="New with tags">New with tags</option>
+                        <option value="Excellent">Excellent condition</option>
+                        <option value="Good">Good condition</option>
+                        <option value="Fair">Fair / Vintage wear</option>
+                    </select>
+                </div>
 
                 <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
                     <div style={{ flex: 1, border: '1px dashed #d1d5db', padding: '20px', textAlign: 'center', borderRadius: '4px' }}>
@@ -116,8 +149,8 @@ export default function UploadForm({ onAddProduct }) {
                     </div>
                 </div>
                 {errorMsg && <p style={{ color: '#b91c1c', fontSize: '0.8rem', marginBottom: '16px' }}>{errorMsg}</p>}
-                <button type="submit" disabled={submitting} style={{ width: '100%', padding: '14px', backgroundColor: '#4b5563', color: 'white', border: 'none', fontWeight: 'bold', letterSpacing: '0.05em', cursor: submitting ? 'not-allowed' : 'pointer' }}>
-                    {submitting ? 'uploading...' : 'publish listing'}
+                <button type="submit" disabled={submitting} style={{ width: '100%', padding: '14px', backgroundColor: '#111', color: 'white', border: 'none', fontWeight: 'bold', letterSpacing: '0.05em', cursor: submitting ? 'not-allowed' : 'pointer' }}>
+                    {submitting ? 'publishing...' : 'publish listing'}
                 </button>
             </form>
         </div>

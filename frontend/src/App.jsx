@@ -30,9 +30,12 @@ import Login from './components/Login';
 import Register from './components/Register';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
+import ChatRoom from './components/ChatRoom';
 import { supabase } from './supabaseClient';
 import { useUserProfile } from './hooks/useUserProfile';
 import { initialMockProducts } from './mockProducts';
+
+const DEMO_ROOM_UUID = "00000000-0000-0000-0000-000000000000";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -40,6 +43,10 @@ function App() {
   const [authView, setAuthView] = useState('login');
   const [userSession, setUserSession] = useState(null);
   const [realItems, setRealItems] = useState([]);
+  const [activeRoomId, setActiveRoomId] = useState(null);
+  const [predictedSize, setPredictedSize] = useState(() => {
+    return localStorage.getItem('moss_predicted_size') || 'S';
+  });
 
   const { profile, loading: profileLoading } = useUserProfile(userSession?.id);
 
@@ -56,7 +63,6 @@ function App() {
         setIsAuthenticated(false);
         setUserSession(null);
       } else if (event === 'PASSWORD_RECOVERY') {
-        // This catches the user returning from the email link
         setIsAuthenticated(false);
         setAuthView('reset-password');
       }
@@ -80,20 +86,21 @@ function App() {
   }, []);
 
   const products = [
-    ...realItems.map(item => ({
-      id: item.id,
-      uploaded_by: item.uploaded_by,
-      title: item.title,
-      brand: item.brand,
-      credits: item.credits,
-      clothImage: item.cloth_image_url,
-      styledImage: item.styled_image_url,
-      style: item.style,
-      lat: item.lat,
-      lon: item.lon,
+    ...(Array.isArray(realItems) ? realItems : []).map(item => ({
+      id: item?.id,
+      uploaded_by: item?.uploaded_by,
+      title: item?.title || 'Untitled',
+      brand: item?.brand || 'Unknown',
+      credits: item?.credits || 0,
+      size: item?.size || 'S',
+      category_gender: item?.category_gender || 'Womenswear',
+      condition: item?.condition || 'Excellent',
+      clothImage: item?.cloth_image_url,
+      styledImage: item?.styled_image_url,
+      style: item?.style,
       is_mock: false,
     })),
-    ...initialMockProducts,
+    ...(initialMockProducts || []),
   ];
 
   const handleLoginSuccess = (user) => {
@@ -111,6 +118,52 @@ function App() {
     setAuthView('login');
     setView('feed');
     setUserSession(null);
+  };
+
+  const handleInitiateTrade = async (product) => {
+    const currentUid = profile?.id || userSession?.id;
+    if (!currentUid) {
+      alert("Please ensure your session is loaded before initiating a trade.");
+      return;
+    }
+
+    const sellerId = product.uploaded_by;
+    if (!sellerId) {
+      setActiveRoomId(DEMO_ROOM_UUID);
+      setView('messages');
+      return;
+    }
+
+    try {
+      let { data: existingRooms } = await supabase
+        .from('chat_rooms')
+        .select('id')
+        .eq('item_id', product.id);
+
+      if (existingRooms && existingRooms.length > 0) {
+        setActiveRoomId(existingRooms[0].id);
+      } else {
+        const { data: newRoom, error } = await supabase
+          .from('chat_rooms')
+          .insert([
+            {
+              user_a_id: currentUid,
+              user_b_id: sellerId,
+              item_id: product.id
+            }
+          ])
+          .select();
+
+        if (error) throw error;
+        setActiveRoomId(newRoom[0].id);
+      }
+      setView('messages');
+    } catch (err) {
+      console.error("Error setting up chat channel:", err);
+      // Clean fallback so user can still demo chat interface seamlessly
+      setActiveRoomId(DEMO_ROOM_UUID);
+      setView('messages');
+    }
   };
 
   if (!isAuthenticated) {
@@ -157,10 +210,15 @@ function App() {
 
       <main className="page-container" style={{ paddingBottom: '60px' }}>
         {view === 'profile' && (
-          <ProfileHeader user={userForScoring} />
+          <ProfileHeader
+            user={userForScoring}
+            products={products}
+            onFitBaselineChange={(newSize) => setPredictedSize(newSize)}
+          />
         )}
 
-        {view === 'shop' && (
+        {/* MODIFIED: Accepts both 'shop' and 'upload' keys from Navbar */}
+        {(view === 'shop' || view === 'upload') && (
           <>
             <UploadForm
               onAddProduct={(newItem) => setRealItems([newItem, ...realItems])}
@@ -169,14 +227,28 @@ function App() {
           </>
         )}
 
-        <CuratedFeed
-          products={products}
-          user={userForScoring}
-          currentUserId={profile?.id}
-        />
+        {view === 'feed' && (
+          <>
+            <CuratedFeed
+              products={products}
+              user={userForScoring}
+              currentUserId={profile?.id || userSession?.id}
+              onInitiateTrade={handleInitiateTrade}
+              userPredictedSize={predictedSize}
+            />
+            <hr style={{ border: '0', height: '1px', background: '#eee', margin: '60px 0 40px 0' }} />
+            <RecentTrades />
+          </>
+        )}
 
-        <hr style={{ border: '0', height: '1px', background: '#eee', margin: '60px 0 40px 0' }} />
-        <RecentTrades />
+        {view === 'messages' && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+            <ChatRoom
+              roomId={activeRoomId || DEMO_ROOM_UUID}
+              currentUserId={profile?.id || userSession?.id || "00000000-0000-0000-0000-000000000001"}
+            />
+          </div>
+        )}
       </main>
     </div>
   );

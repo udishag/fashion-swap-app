@@ -7,10 +7,14 @@ const Navbar = ({ setView, onLogout }) => {
                 moss.
             </h1>
             <div className="nav-links">
-                <span onClick={() => setView('shop')} style={{ cursor: 'pointer' }}>shop</span>
+                <span onClick={() => setView('feed')} style={{ cursor: 'pointer' }}>shop</span> {/* Restored default feed view target */}
+                <span onClick={() => setView('shop')} style={{ cursor: 'pointer' }}>upload</span> {/* Clear upload view link */}
                 <span onClick={() => setView('profile')} style={{ cursor: 'pointer' }}>profile</span>
 
-                {/* CHANGED: Now triggers the immediate logout/redirect function */}
+                {/* ADDED: Messages Link matching your current style */}
+                <span onClick={() => setView('messages')} style={{ cursor: 'pointer' }}>messages</span>
+
+                {/* Now triggers the immediate logout/redirect function */}
                 <span onClick={onLogout} style={{ cursor: 'pointer', color: '#000' }}>logout</span>
             </div>
         </nav>

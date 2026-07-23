@@ -2,10 +2,25 @@
 // FILE LOCATION: frontend/src/hooks/useMossScores.js
 // ────────────────────────────────────────────────────────────────────────────
 
+// ────────────────────────────────────────────────────────────────────────────
+// FILE LOCATION: frontend/src/hooks/useMossScores.js
+// ────────────────────────────────────────────────────────────────────────────
+
 import { useState, useEffect } from 'react'
 
-// Switched to 127.0.0.1 to perfectly match what Flask is broadcasting
 const ML_API_BASE = import.meta.env.VITE_ML_API_URL ?? 'http://127.0.0.1:5001'
+
+export function haversineKm(lat1, lon1, lat2, lon2) {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return 3; // Default fallback distance
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 export function useMossScores({ user, items }) {
     const [scores, setScores] = useState([])
@@ -20,7 +35,6 @@ export function useMossScores({ user, items }) {
     useEffect(() => {
         console.log("🧠 ML Hook Triggered!");
 
-        // We removed the strict userBrands check so it ALWAYS fires for you to test
         if (!items?.length) {
             console.log("🛑 Aborting ML: No items to score.");
             return;
@@ -41,7 +55,6 @@ export function useMossScores({ user, items }) {
                 item_price: item.credits ?? 30,
                 distance_km: item.distance_km ?? 3,
                 is_mock: item.is_mock ?? true,
-                // THE FIX: Provide a default string instead of null!
                 item_style: item.style || "casual",
             })),
         }
@@ -57,8 +70,12 @@ export function useMossScores({ user, items }) {
             .then(data => {
                 console.log("✅ Python ML Response:", data);
                 if (cancelled) return
-                if (data.status === 'success') setScores(data.results)
-                else setError(data.message ?? 'scoring failed')
+                if (data.status === 'success') {
+                    // FIXED: Checks both data.scores and data.results safely
+                    setScores(data.scores ?? data.results ?? [])
+                } else {
+                    setError(data.message ?? 'scoring failed')
+                }
             })
             .catch(err => {
                 console.error("❌ Python Fetch Error:", err);
@@ -74,22 +91,15 @@ export function useMossScores({ user, items }) {
         JSON.stringify(uploadedBrands),
         JSON.stringify(userStyles),
         hasPremium,
-        JSON.stringify(items?.map(i => i.id)),
+        JSON.stringify(items?.map(i => i?.id)),
     ])
 
-    const getScore = (itemId) =>
-        scores.find(s => String(s.item_id) === String(itemId)) ?? null
+    // SAFE GUARD: Ensures scores is an array so .find() never throws a TypeError
+    const getScore = (itemId) => {
+        if (!Array.isArray(scores)) return null;
+        return scores.find((s) => s && (s.item_id === itemId || s.id === itemId)) || null;
+    };
 
-    return { scores, loading, error, getScore }
-}
-
-export function haversineKm(lat1, lon1, lat2, lon2) {
-    const R = 6371
-    const dLat = (lat2 - lat1) * Math.PI / 180
-    const dLon = (lon2 - lon1) * Math.PI / 180
-    const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon / 2) ** 2
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    // FIXED: Hook now properly returns getScore, scores, loading, and error!
+    return { getScore, scores, loading, error };
 }
