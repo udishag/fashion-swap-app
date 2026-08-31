@@ -10,20 +10,32 @@
 // FILE LOCATION: frontend/src/components/ProductCard.jsx (replaces existing)
 // ────────────────────────────────────────────────────────────────────────────
 
+// ────────────────────────────────────────────────────────────────────────────
+// FILE LOCATION: frontend/src/components/ProductCard.jsx
+// ────────────────────────────────────────────────────────────────────────────
+
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { evaluateFitCompatibility } from '../utils/fitEngine';
 
-const ProductCard = ({ product, matchData, currentUserId, currentUserEmail, onInitiateTrade, userPredictedSize = 'S' }) => {
+const ProductCard = ({
+    product,
+    matchData,
+    currentUserId,
+    currentUserEmail,
+    onInitiateTrade,
+    userPredictedSize = 'S',
+    distanceKm = 2.5
+}) => {
     const [hovered, setHovered] = useState(false);
-
     const isAdmin = currentUserEmail === 'udimoss@gmail.com';
     const isCreator = currentUserId && (currentUserId === product.uploaded_by || currentUserId === product.user_id);
 
-    // FIXED: Added missing 'const' keyword!
     const canDelete = !product.is_mock && (isCreator || isAdmin);
-
     const isMockOrDemo = product.is_mock || parseFloat(product.credits) === 0 || product.credits === 0;
+
+    // LOCATION THRESHOLD CHECK
+    const isOutOfRadius = distanceKm > 10;
 
     // EVALUATE ACCURATE FIT COMPATIBILITY
     const fitEval = evaluateFitCompatibility(product.size || 'S', userPredictedSize);
@@ -31,10 +43,10 @@ const ProductCard = ({ product, matchData, currentUserId, currentUserEmail, onIn
     // DYNAMIC SCORE: Extract raw percentage from XGBoost Python Backend
     const getXGBoostScore = () => {
         if (matchData?.match_pct !== undefined && matchData?.match_pct !== null) {
-            return matchData.match_pct; // Returns integer percentage (e.g., 88, 92, 65)
+            return matchData.match_pct;
         }
         if (matchData?.match_score !== undefined && matchData?.match_score !== null) {
-            return Math.round(matchData.match_score * 100); // Converts float 0.88 to 88
+            return Math.round(matchData.match_score * 100);
         }
 
         // Deterministic backup hash if Python ML service is offline
@@ -44,7 +56,6 @@ const ProductCard = ({ product, matchData, currentUserId, currentUserEmail, onIn
         else if (['zara', 'dynamite', 'hollister'].includes(brand)) base = 80;
         else if (['uniqlo', 'shein', 'h&m'].includes(brand)) base = 70;
 
-        // FIXED: c.charCodeAt(0) correctly scoped
         const charSum = String(product.id || product.title || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
         return Math.min(Math.max(base + ((charSum % 11) - 5), 45), 98);
     };
@@ -116,6 +127,24 @@ const ProductCard = ({ product, matchData, currentUserId, currentUserEmail, onIn
                     {product.brand} • Size {product.size || 'S'} • {product.condition || 'Excellent'} • {parseFloat(product.credits).toFixed(1)} cr
                 </p>
 
+                {/* LOCATION DISTANCE BADGE */}
+                <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.72rem',
+                    fontWeight: '600',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    backgroundColor: isOutOfRadius ? '#fef2f2' : '#f3f4f6',
+                    color: isOutOfRadius ? '#991b1b' : '#374151',
+                    marginBottom: '8px',
+                    marginRight: '6px'
+                }}>
+                    <span>📍 {distanceKm} km away</span>
+                    {isOutOfRadius && <span style={{ fontWeight: '700' }}>(Outside 10km)</span>}
+                </div>
+
                 {/* DYNAMIC MATCH PERCENTAGE BADGE */}
                 <span style={{
                     display: 'inline-block',
@@ -144,7 +173,7 @@ const ProductCard = ({ product, matchData, currentUserId, currentUserEmail, onIn
                     {fitEval.message}
                 </div>
 
-                {/* TRADE / DEMO BUTTON */}
+                {/* TRADE / DISTANCE / DEMO ACTION BUTTON */}
                 {isMockOrDemo ? (
                     <button
                         disabled
@@ -163,6 +192,25 @@ const ProductCard = ({ product, matchData, currentUserId, currentUserEmail, onIn
                         }}
                     >
                         Demo Piece (Not Tradeable)
+                    </button>
+                ) : isOutOfRadius ? (
+                    <button
+                        disabled
+                        style={{
+                            marginTop: '4px',
+                            width: '100%',
+                            padding: '10px',
+                            backgroundColor: '#f3f4f6',
+                            color: '#9ca3af',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '6px',
+                            fontSize: '0.8rem',
+                            fontWeight: '600',
+                            cursor: 'not-allowed',
+                            textTransform: 'uppercase'
+                        }}
+                    >
+                        Trade Unavailable (&gt;10km)
                     </button>
                 ) : (
                     <button

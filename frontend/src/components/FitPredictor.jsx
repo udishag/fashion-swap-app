@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { calculatePredictedSize } from '../utils/fitEngine';
 
+
 export default function FitPredictor({ onFitBaselineChange }) {
     const [fitItems, setFitItems] = useState([
         { brand: 'Aritzia', item: 'Sculpt Knit Tank', size: 'S' },

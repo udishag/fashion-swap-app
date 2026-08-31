@@ -5,23 +5,38 @@ const ForgotPassword = ({ onNavigateToLogin }) => {
     const [email, setEmail] = useState('');
     const [statusMsg, setStatusMsg] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false); // Tracks if we should show green text
 
-    const handleResetRequest = async (e) => {
+    const handleResetPassword = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         setStatusMsg(null);
+        setIsSuccess(false);
 
-        const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-            // IMPORTANT: Change this to your Vercel URL when deploying (e.g., 'https://moss-exchange.vercel.app/')
-            redirectTo: 'https://moss-exchange.vercel.app/',
-        });
+        const cleanEmail = email.trim().toLowerCase();
 
-        setIsLoading(false);
+        try {
+            const { error: resetError } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+                redirectTo: 'http://localhost:5173/reset-password',
+            });
 
-        if (error) {
-            setStatusMsg(`error: ${error.message}`);
-        } else {
-            setStatusMsg("if an account exists, a reset link has been sent to your email.");
+            if (resetError) {
+                // Log the real error (like rate limits) to the console for YOU to see, 
+                // but hide it from the actual user interface.
+                console.error("Supabase Background Error:", resetError.message);
+            }
+
+            // INDUSTRY STANDARD UX: 
+            // Always show a success message so bad actors can't guess emails, 
+            // and normal users don't see ugly rate-limit server errors.
+            setIsSuccess(true);
+            setStatusMsg("if this email is registered, a recovery link has been sent.");
+
+        } catch (err) {
+            setIsSuccess(false);
+            setStatusMsg("error: unable to process request at this time.");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -30,7 +45,7 @@ const ForgotPassword = ({ onNavigateToLogin }) => {
             <h2 className="login-header">reset password</h2>
             <p className="login-subheader">enter your email to receive a recovery link.</p>
 
-            <form onSubmit={handleResetRequest}>
+            <form onSubmit={handleResetPassword}>
                 <div className="input-group">
                     <label>email</label>
                     <input
@@ -46,7 +61,7 @@ const ForgotPassword = ({ onNavigateToLogin }) => {
                     <p style={{
                         fontSize: '0.85rem',
                         marginBottom: '12px',
-                        color: statusMsg.includes('error') ? '#b91c1c' : '#15803d'
+                        color: isSuccess ? '#15803d' : '#b91c1c'
                     }}>
                         {statusMsg}
                     </p>
@@ -58,7 +73,7 @@ const ForgotPassword = ({ onNavigateToLogin }) => {
             </form>
 
             <p className="login-footer-text" style={{ marginTop: '20px' }}>
-                remembered it? <span onClick={onNavigateToLogin} style={{ textDecoration: 'underline', cursor: 'pointer' }}>back to login</span>
+                remembered it? <span onClick={onNavigateToLogin} style={{ textDecoration: 'underline', cursor: 'pointer', color: '#000' }}>back to login</span>
             </p>
         </div>
     );

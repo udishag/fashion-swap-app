@@ -44,6 +44,8 @@ function App() {
   const [userSession, setUserSession] = useState(null);
   const [realItems, setRealItems] = useState([]);
   const [activeRoomId, setActiveRoomId] = useState(null);
+  //messgaing feautre
+  const [viewedProfileUser, setViewedProfileUser] = useState(null);
   const [predictedSize, setPredictedSize] = useState(() => {
     return localStorage.getItem('moss_predicted_size') || 'S';
   });
@@ -118,6 +120,25 @@ function App() {
     setAuthView('login');
     setView('feed');
     setUserSession(null);
+  };
+
+  // When clicking your own profile from the Navbar
+  const handleOpenMyProfile = () => {
+    setViewedProfileUser(null); // null means viewing YOUR OWN profile
+    setView('profile');
+  };
+
+  // When clicking a friend's profile anywhere (e.g. from the friends list)
+  const handleOpenFriendProfile = (friendData) => {
+    setViewedProfileUser(friendData); // Pass User B's profile object
+    setView('profile');
+  };
+
+  // When clicking the "Message" button from User B's profile
+  const handleStartMessageFromProfile = (friendData) => {
+    // Set up or open a chat room with this user
+    setActiveRoomId(DEMO_ROOM_UUID);
+    setView('messages');
   };
 
   const handleInitiateTrade = async (product) => {
@@ -205,7 +226,16 @@ function App() {
   return (
     <div className="app-shell">
       <header className="page-container">
-        <Navbar setView={setView} onLogout={handleLogout} />
+        <Navbar
+          setView={(v) => {
+            if (v === 'profile') {
+              handleOpenMyProfile();
+            } else {
+              setView(v);
+            }
+          }}
+          onLogout={handleLogout}
+        />
       </header>
 
       <main className="page-container" style={{ paddingBottom: '60px' }}>
@@ -213,6 +243,9 @@ function App() {
           <ProfileHeader
             user={userForScoring}
             products={products}
+            profileUser={viewedProfileUser} // ADD THIS: passes null if your profile, or Friend object if viewing a friend
+            onOpenFriendProfile={handleOpenFriendProfile} // ADD THIS: allows clicking friends within the sidebar
+            onStartMessage={handleStartMessageFromProfile} // ADD THIS: handles the message button on friend profiles
             onFitBaselineChange={(newSize) => setPredictedSize(newSize)}
           />
         )}

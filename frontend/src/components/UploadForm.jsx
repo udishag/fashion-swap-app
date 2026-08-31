@@ -1,5 +1,10 @@
-import React, { useState } from 'react';
+// ────────────────────────────────────────────────────────────────────────────
+// FILE LOCATION: frontend/src/components/UploadForm.jsx
+// ────────────────────────────────────────────────────────────────────────────
+
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { GTA_CITIES, getCityCoordinates } from '../utils/cities';
 
 const BRAND_TIERS = {
     'aritzia': 3, 'zara': 3, 'urban outfitters': 3, 'lululemon': 3,
@@ -23,6 +28,7 @@ export default function UploadForm({ onAddProduct }) {
     const [categoryGender, setCategoryGender] = useState('Womenswear');
     const [color, setColor] = useState('');
     const [condition, setCondition] = useState('Excellent');
+    const [selectedCity, setSelectedCity] = useState('mississauga'); // Default listing city
     const [submitting, setSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState(null);
     const [clothFile, setClothFile] = useState(null);
@@ -44,6 +50,9 @@ export default function UploadForm({ onAddProduct }) {
         }
 
         setSubmitting(true);
+
+        // Resolve coordinates for the chosen listing city
+        const cityData = getCityCoordinates(selectedCity);
 
         try {
             const { data: clothUpload, error: clothErr } = await supabase.storage
@@ -76,13 +85,16 @@ export default function UploadForm({ onAddProduct }) {
                     cloth_image_url: clothData.publicUrl,
                     styled_image_url: styledData.publicUrl,
                     is_mock: false,
+                    location_name: cityData.name,  // e.g. "Mississauga" or "Toronto"
+                    latitude: cityData.lat,
+                    longitude: cityData.lng
                 })
                 .select()
                 .single();
 
             if (insertErr) throw insertErr;
 
-            alert("Listing published successfully with fit metadata!");
+            alert("Listing published successfully!");
             setTitle(''); setBrand(''); setCredits(''); setColor(''); setClothFile(null); setStyledFile(null);
             onAddProduct?.(newItem);
 
@@ -108,7 +120,7 @@ export default function UploadForm({ onAddProduct }) {
                     <input type="text" value={credits ? `${credits} cr` : ''} readOnly placeholder="credits" style={{ flex: 1, padding: '12px', backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '4px', color: '#6b7280', outline: 'none' }} />
                 </div>
 
-                {/* NEW METADATA INPUT ROW */}
+                {/* ITEM METADATA */}
                 <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
                     <select value={size} onChange={(e) => setSize(e.target.value)} style={{ flex: 1, padding: '12px', border: '1px solid #e5e7eb', borderRadius: '4px', backgroundColor: '#fff' }}>
                         <option value="XXS">Size XXS</option>
@@ -118,7 +130,6 @@ export default function UploadForm({ onAddProduct }) {
                         <option value="L">Size L</option>
                         <option value="XL">Size XL</option>
                         <option value="PLUS SIZE">Size Plus</option>
-
                     </select>
 
                     <select value={categoryGender} onChange={(e) => setCategoryGender(e.target.value)} style={{ flex: 1, padding: '12px', border: '1px solid #e5e7eb', borderRadius: '4px', backgroundColor: '#fff' }}>
@@ -128,9 +139,24 @@ export default function UploadForm({ onAddProduct }) {
                     </select>
                 </div>
 
+                {/* LOCATION SELECTOR ROW */}
                 <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
                     <input type="text" placeholder="color (e.g. pink, washed denim)" value={color} onChange={(e) => setColor(e.target.value)} style={{ flex: 1, padding: '12px', border: '1px solid #e5e7eb', borderRadius: '4px', outline: 'none' }} />
-                    <select value={condition} onChange={(e) => setCondition(e.target.value)} style={{ flex: 1, padding: '12px', border: '1px solid #e5e7eb', borderRadius: '4px', backgroundColor: '#fff' }}>
+
+                    <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} style={{ flex: 1, padding: '12px', border: '1px solid #e5e7eb', borderRadius: '4px', backgroundColor: '#fff', fontWeight: '500' }}>
+                        <option value="mississauga">📍 Mississauga</option>
+                        <option value="toronto">📍 Toronto</option>
+                        <option value="brampton">📍 Brampton</option>
+                        <option value="oakville">📍 Oakville</option>
+                        <option value="scarborough">📍 Scarborough</option>
+                        <option value="vaughan">📍 Vaughan</option>
+                        <option value="markham">📍 Markham</option>
+                        <option value="hamilton">📍 Hamilton</option>
+                    </select>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                    <select value={condition} onChange={(e) => setCondition(e.target.value)} style={{ width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '4px', backgroundColor: '#fff' }}>
                         <option value="New with tags">New with tags</option>
                         <option value="Excellent">Excellent condition</option>
                         <option value="Good">Good condition</option>

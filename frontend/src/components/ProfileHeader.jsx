@@ -1,23 +1,24 @@
 // ────────────────────────────────────────────────────────────────────────────
-// FILE LOCATION: frontend/src/components/ProfileHeader.jsx (replaces existing)
+// FILE LOCATION: frontend/src/components/ProfileHeader.jsx 
 // ────────────────────────────────────────────────────────────────────────────
-
 
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import udiPfp from '../assets/udipfp.jpeg';
 
-// Import local friend pfp assets
-import franpfp from '../assets/franpfp.jpeg';
-import natepfp from '../assets/natepfp.JPG';
-import ishaalpfp from '../assets/ishaalpfp.JPG';
-
-// Import the dedicated Fit Predictor Component
+// Import the dedicated Components
 import FitPredictor from './FitPredictor';
+import FriendManager from './FriendManager';
 
-export default function ProfileHeader({ user, products, onFitBaselineChange }) {
+export default function ProfileHeader({ user, products, profileUser, onOpenFriendProfile, onStartMessage, onFitBaselineChange }) {
     const fileInputRef = useRef(null);
     const [uploading, setUploading] = useState(false);
+
+    // Custom aesthetic notification state
+    const [toast, setToast] = useState('');
+
+    const isMyProfile = !profileUser;
+
     const [userData, setUserData] = useState({
         username: 'moss curator',
         avatarUrl: null,
@@ -25,29 +26,30 @@ export default function ProfileHeader({ user, products, onFitBaselineChange }) {
         stylesAesthetics: ['minimalist', 'clean girl', 'coquette', '90s archival']
     });
 
-    // Friends list using MOSS
-    const mockFriends = [
-        { name: 'fran', avatar: franpfp },
-        { name: 'nathan', avatar: natepfp },
-        { name: 'ishaal', avatar: ishaalpfp }
-    ];
+    const displayUser = isMyProfile ? userData : profileUser;
 
-    // Filter products uploaded by the current logged-in user
-    const [userUploadedItems, setUserUploadedItems] = useState([]);
+    // AESTHETIC POPUP HELPER
+    const showToast = (message) => {
+        setToast(message);
+        setTimeout(() => setToast(''), 3000); // Disappears after 3 seconds
+    };
 
-    useEffect(() => {
-        const filtered = (products || []).filter(item => item.uploaded_by === user?.id && !item.is_mock);
-        setUserUploadedItems(filtered);
-    }, [products, user]);
+    // FIXED CACHE/FLASHING GLITCH: Calculate items synchronously during render, NOT in a useEffect
+    const targetIdentifier = isMyProfile ? user?.id : profileUser?.username;
+    const userUploadedItems = (products || []).filter(item => {
+        if (isMyProfile) {
+            return item.uploaded_by === user?.id && !item.is_mock && !item.is_sold;
+        } else {
+            return item.uploaded_by === targetIdentifier || (item.brand && !item.is_sold);
+        }
+    });
 
-    // Trade stats
     const totalListings = userUploadedItems.length;
-    const pendingTradesCount = 1;
-    const completedTradesCount = 2;
 
     const fetchUserData = async () => {
+        if (!isMyProfile) return;
         try {
-            const { data: { user: authUser }, error } = await supabase.auth.getUser();
+            const { data: { user: authUser } } = await supabase.auth.getUser();
 
             if (authUser && authUser.user_metadata) {
                 const meta = authUser.user_metadata;
@@ -65,9 +67,10 @@ export default function ProfileHeader({ user, products, onFitBaselineChange }) {
 
     useEffect(() => {
         fetchUserData();
-    }, [user]);
+    }, [user, isMyProfile]);
 
     const handleAvatarClick = () => {
+        if (!isMyProfile) return;
         fileInputRef.current.click();
     };
 
@@ -100,18 +103,18 @@ export default function ProfileHeader({ user, products, onFitBaselineChange }) {
 
             if (updateError) throw updateError;
 
-            alert("Profile picture updated successfully!");
+            showToast("profile picture updated.");
             fetchUserData();
         } catch (error) {
-            console.error("Error uploading avatar:", error.message);
+            showToast("error uploading image.");
         } finally {
             setUploading(false);
         }
     };
 
-    // Mark an uploaded item as SOLD / TRADED
     const handleMarkAsSold = async (itemId) => {
-        if (!window.confirm("Mark this piece as Traded/Sold? It will be archived.")) return;
+        if (!isMyProfile) return;
+        if (!window.confirm("mark this piece as traded/sold? it will be archived.")) return;
 
         try {
             const { error } = await supabase
@@ -120,24 +123,42 @@ export default function ProfileHeader({ user, products, onFitBaselineChange }) {
                 .eq('id', itemId);
 
             if (error) throw error;
-
-            setUserUploadedItems(prev => prev.filter(item => item.id !== itemId));
-            alert("Listing marked as traded!");
+            showToast("listing marked as traded.");
         } catch (err) {
-            console.error("Error updating status:", err);
-            alert("Updated locally for demo!");
-            setUserUploadedItems(prev => prev.filter(item => item.id !== itemId));
+            showToast("updated locally for demo.");
         }
     };
 
     return (
-        <div style={{ padding: '40px 20px', fontFamily: 'sans-serif', maxWidth: '850px', margin: '0 auto' }}>
+        <div style={{ padding: '40px 20px', fontFamily: 'sans-serif', maxWidth: '850px', margin: '0 auto', position: 'relative' }}>
+
+            {/* --- CUSTOM MOSS AESTHETIC TOAST NOTIFICATION --- */}
+            {toast && (
+                <div style={{
+                    position: 'fixed',
+                    bottom: '40px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: '#000000',
+                    color: '#ffffff',
+                    padding: '12px 24px',
+                    borderRadius: '30px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    zIndex: 1000,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    textTransform: 'lowercase',
+                    letterSpacing: '0.5px'
+                }}>
+                    {toast}
+                </div>
+            )}
 
             {/* --- USER DETAILS SECTION --- */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '30px', marginBottom: '40px' }}>
-                <div style={{ position: 'relative', cursor: 'pointer' }} onClick={handleAvatarClick}>
+                <div style={{ position: 'relative', cursor: isMyProfile ? 'pointer' : 'default' }} onClick={handleAvatarClick}>
                     <img
-                        src={userData.avatarUrl ? userData.avatarUrl : udiPfp}
+                        src={displayUser.avatarUrl || udiPfp}
                         alt="Profile"
                         style={{
                             width: '120px', height: '120px', borderRadius: '50%',
@@ -145,25 +166,80 @@ export default function ProfileHeader({ user, products, onFitBaselineChange }) {
                             opacity: uploading ? 0.5 : 1
                         }}
                     />
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                    />
+                    {isMyProfile && (
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                        />
+                    )}
                 </div>
 
                 <div>
                     <h1 style={{ margin: '0 0 5px 0', fontSize: '28px', fontWeight: '500', textTransform: 'lowercase' }}>
-                        {userData.username}
+                        @{displayUser.username}
                     </h1>
-                    <p style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>
-                        <strong>3.5</strong> available credits • <span style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>ARCHIVAL CONNOISSEUR</span>
-                    </p>
-                    <div style={{ color: '#0066cc', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <span>✓</span> $10 PREMIUM FEED CURATION ACTIVE
-                    </div>
+
+                    {isMyProfile ? (
+                        <>
+                            <p style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>
+                                <strong>3.5</strong> available credits • <span style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>ARCHIVAL CONNOISSEUR</span>
+                            </p>
+                            <div style={{ color: '#0066cc', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span>✓</span> $10 PREMIUM FEED CURATION ACTIVE
+                            </div>
+                        </>
+                    ) : (
+                        <div style={{ marginTop: '10px' }}>
+                            <p style={{ margin: '0 0 12px 0', color: '#666', fontSize: '13px' }}>
+                                MOSS Member • Active Closet Curator
+                            </p>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button
+                                    onClick={() => onStartMessage(displayUser)}
+                                    style={{
+                                        backgroundColor: '#000000',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        borderRadius: '20px',
+                                        padding: '8px 20px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    message @{displayUser.username}
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        const { error } = await supabase
+                                            .from('friendships')
+                                            .insert([{ user_id: user?.id, friend_id: displayUser.id, status: 'pending' }]);
+
+                                        if (error) {
+                                            showToast("request already sent.");
+                                        } else {
+                                            showToast("friend request sent.");
+                                        }
+                                    }}
+                                    style={{
+                                        backgroundColor: '#ffffff',
+                                        color: '#000000',
+                                        border: '1px solid #000000',
+                                        borderRadius: '20px',
+                                        padding: '8px 20px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    add friend
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -172,7 +248,7 @@ export default function ProfileHeader({ user, products, onFitBaselineChange }) {
                 <div>
                     <h3 style={{ fontSize: '12px', letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 15px 0' }}>Brands Interested</h3>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        {userData.brandsInterested.map(b => (
+                        {(displayUser.brandsInterested || []).map(b => (
                             <span key={b} style={{ border: '1px solid #ddd', borderRadius: '20px', padding: '6px 14px', fontSize: '13px', textTransform: 'lowercase' }}>
                                 {b}
                             </span>
@@ -182,7 +258,7 @@ export default function ProfileHeader({ user, products, onFitBaselineChange }) {
                 <div>
                     <h3 style={{ fontSize: '12px', letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 15px 0' }}>Styles & Aesthetics</h3>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        {userData.stylesAesthetics.map(s => (
+                        {(displayUser.stylesAesthetics || []).map(s => (
                             <span key={s} style={{ border: '1px solid #ddd', borderRadius: '20px', padding: '6px 14px', fontSize: '13px', textTransform: 'lowercase' }}>
                                 {s}
                             </span>
@@ -192,34 +268,38 @@ export default function ProfileHeader({ user, products, onFitBaselineChange }) {
             </div>
 
             {/* --- FIT PREDICTOR BASELINE COMPONENT --- */}
-            <FitPredictor onFitBaselineChange={onFitBaselineChange} />
+            {isMyProfile && (
+                <FitPredictor onFitBaselineChange={onFitBaselineChange} />
+            )}
 
             {/* --- STATS SECTION --- */}
-            <div style={{ display: 'flex', gap: '40px', marginBottom: '40px', backgroundColor: '#fafafa', padding: '20px', borderRadius: '8px' }}>
-                <div style={{ textAlign: 'center', flex: 1 }}>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#111' }}>{totalListings}</div>
-                    <div style={{ fontSize: '12px', textTransform: 'uppercase', color: '#666', marginTop: '4px' }}>your uploads</div>
+            {isMyProfile && (
+                <div style={{ display: 'flex', gap: '40px', marginBottom: '40px', backgroundColor: '#fafafa', padding: '20px', borderRadius: '8px' }}>
+                    <div style={{ textAlign: 'center', flex: 1 }}>
+                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#111' }}>{totalListings}</div>
+                        <div style={{ fontSize: '12px', textTransform: 'uppercase', color: '#666', marginTop: '4px' }}>your uploads</div>
+                    </div>
+                    <div style={{ textAlign: 'center', flex: 1, borderLeft: '1px solid #eaeaea', borderRight: '1px solid #eaeaea' }}>
+                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#111' }}>1</div>
+                        <div style={{ fontSize: '12px', textTransform: 'uppercase', color: '#666', marginTop: '4px' }}>trades pending</div>
+                    </div>
+                    <div style={{ textAlign: 'center', flex: 1 }}>
+                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#111' }}>2</div>
+                        <div style={{ fontSize: '12px', textTransform: 'uppercase', color: '#666', marginTop: '4px' }}>trades completed</div>
+                    </div>
                 </div>
-                <div style={{ textAlign: 'center', flex: 1, borderLeft: '1px solid #eaeaea', borderRight: '1px solid #eaeaea' }}>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#111' }}>{pendingTradesCount}</div>
-                    <div style={{ fontSize: '12px', textTransform: 'uppercase', color: '#666', marginTop: '4px' }}>trades pending</div>
-                </div>
-                <div style={{ textAlign: 'center', flex: 1 }}>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#111' }}>{completedTradesCount}</div>
-                    <div style={{ fontSize: '12px', textTransform: 'uppercase', color: '#666', marginTop: '4px' }}>trades completed</div>
-                </div>
-            </div>
+            )}
 
             {/* --- GRID SPLIT: UPLOADS & FRIENDS --- */}
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '40px' }}>
 
-                {/* User's Uploaded Clothes Feed */}
+                {/* Closet Uploads Feed */}
                 <div>
                     <h3 style={{ fontSize: '14px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '20px' }}>
-                        Your Closet Uploads
+                        {isMyProfile ? 'Your Closet Uploads' : `@${displayUser.username}'s Closet`}
                     </h3>
                     {userUploadedItems.length === 0 ? (
-                        <p style={{ color: '#888', fontSize: '14px' }}>No clothes uploaded yet. Head over to the Upload tab to start listing!</p>
+                        <p style={{ color: '#888', fontSize: '14px' }}>no active listings available right now.</p>
                     ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '15px' }}>
                             {userUploadedItems.map(item => (
@@ -235,23 +315,24 @@ export default function ProfileHeader({ user, products, onFitBaselineChange }) {
                                         </div>
                                         <div style={{ fontSize: '10px', color: '#666', marginBottom: '6px' }}>{item.credits} cr</div>
 
-                                        {/* ACTION BUTTON: MARK AS TRADED */}
-                                        <button
-                                            onClick={() => handleMarkAsSold(item.id)}
-                                            style={{
-                                                width: '100%',
-                                                backgroundColor: '#111',
-                                                color: '#fff',
-                                                border: 'none',
-                                                borderRadius: '3px',
-                                                padding: '4px',
-                                                fontSize: '9px',
-                                                fontWeight: '600',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Mark Traded
-                                        </button>
+                                        {isMyProfile && (
+                                            <button
+                                                onClick={() => handleMarkAsSold(item.id)}
+                                                style={{
+                                                    width: '100%',
+                                                    backgroundColor: '#111',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    borderRadius: '3px',
+                                                    padding: '4px',
+                                                    fontSize: '9px',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                mark traded
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -259,26 +340,12 @@ export default function ProfileHeader({ user, products, onFitBaselineChange }) {
                     )}
                 </div>
 
-                {/* Friends Using MOSS Section */}
-                <div style={{ borderLeft: '1px solid #eaeaea', paddingLeft: '30px' }}>
-                    <h3 style={{ fontSize: '14px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '20px' }}>
-                        Friends on MOSS
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                        {mockFriends.map(friend => (
-                            <div key={friend.name} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <img
-                                    src={friend.avatar}
-                                    alt={friend.name}
-                                    style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #eee' }}
-                                />
-                                <span style={{ fontSize: '13px', fontWeight: '500', color: '#333' }}>
-                                    @{friend.name}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                {/* SOCIAL GRAPH: Managed by FriendManager */}
+                <FriendManager
+                    currentUser={user}
+                    isMyProfile={isMyProfile}
+                    onOpenFriendProfile={onOpenFriendProfile}
+                />
 
             </div>
 

@@ -13,10 +13,14 @@
 import React from 'react';
 import ProductCard from './ProductCard';
 import { useMossScores } from '../hooks/useMossScores';
+import { calculateHaversineDistance } from '../utils/geo';
 
 const CuratedFeed = ({ products = [], user, currentUserId, onInitiateTrade, userPredictedSize = 'S' }) => {
     const safeProducts = Array.isArray(products) ? products : [];
     const { getScore, loading, error } = useMossScores({ user: user || {}, items: safeProducts });
+
+    const userLat = user?.latitude || 43.6532;
+    const userLng = user?.longitude || -79.3832;
 
     return (
         <div className="curated-feed">
@@ -35,7 +39,11 @@ const CuratedFeed = ({ products = [], user, currentUserId, onInitiateTrade, user
                 {safeProducts.map((product) => {
                     if (!product || !product.id) return null;
                     const matchData = (!loading && typeof getScore === 'function') ? getScore(product.id) : null;
-
+                    // Calculate distance in KM dynamically
+                    const distanceKm = calculateHaversineDistance(
+                        userLat, userLng,
+                        product.latitude, product.longitude
+                    );
                     return (
                         <ProductCard
                             key={product.id}
