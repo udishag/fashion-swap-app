@@ -1,33 +1,49 @@
 /* ==========================================================================
-   1. CORE STYLE & TYPOGRAPHY RESET
+   1. CORE STYLE, TYPOGRAPHY & COLORS
    ========================================================================== */
-body {
-  margin: 0;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  background-color: #fff;
-  color: #000;
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Fraunces:opsz,wght@9..144,400;500;600;700;900&display=swap');
+
+:root {
+  /* The MOSS Editorial Palette */
+  --moss-matcha: #838F58;
+  --moss-strawberry: #F9D1D9;
+  --moss-cream: #FCFAF8;
+  --moss-text-dark: #2C3522;
+  --moss-text-muted: #7A8271;
+
+  /* The MOSS Typography */
+  --font-display: 'Fraunces', serif;
+  --font-body: 'DM Sans', sans-serif;
 }
 
-/* Enforce signature clean lowercase typography globally */
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--moss-cream);
+  color: var(--moss-text-dark);
+}
+
 h1,
 h2,
 h3,
-h4,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--moss-matcha);
+}
+
 span,
 label,
 input,
 button,
 p,
-a {
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-  text-transform: lowercase;
-  letter-spacing: 0.03em;
+a,
+select {
+  font-family: var(--font-body);
 }
 
-/* ==========================================================================
-   2. GLOBAL ALIGNMENT & NAVBAR
-   ========================================================================== */
 .page-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -41,15 +57,15 @@ a {
   justify-content: space-between;
   align-items: center;
   padding: 30px 0;
-  /* Alignment handled by page-container */
-  background: #fff;
+  background: transparent;
 }
 
 .navbar h1 {
   margin: 0;
-  font-size: 1.6rem;
-  font-weight: bold;
+  font-size: 2.2rem;
+  font-weight: 700;
   cursor: pointer;
+  color: var(--moss-matcha);
 }
 
 .nav-links {
@@ -60,38 +76,25 @@ a {
 
 .nav-links span {
   cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 400;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--moss-text-dark);
+  transition: color 0.2s ease;
 }
 
-/* Standardized Section Headers for perfect alignment */
-.section-header {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin: 0 0 24px 0;
-  /* Zero left margin ensures vertical alignment */
-  text-transform: lowercase;
-  letter-spacing: 0.05em;
-  display: block;
-  width: 100%;
-}
-
-hr {
-  border: 0;
-  height: 1px;
-  background: #eee;
-  margin: 40px 0;
-  width: 100%;
+.nav-links span:hover {
+  color: var(--moss-matcha);
 }
 
 /* ==========================================================================
-   3. 50-50 SPLIT LOGIN & LOGOUT (SLEEK RESTORATION)
+   2. 50-50 SPLIT LOGIN (RESTORED & STYLED)
    ========================================================================== */
 .login-split-container {
   display: flex;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  background-color: var(--moss-cream);
 }
 
 .login-slideshow-half {
@@ -113,32 +116,29 @@ hr {
   justify-content: center;
   align-items: center;
   padding: 60px;
-  background: #fff;
 }
 
 .login-form-wrapper {
   width: 100%;
   max-width: 340px;
-  /* Keeps the form sleek and narrow */
   display: flex;
   flex-direction: column;
 }
 
 .login-header {
-  font-size: 2.2rem;
-  font-weight: 500;
+  font-size: 3rem;
   margin: 0 0 4px 0;
   text-align: center;
+  color: var(--moss-matcha);
 }
 
 .login-subheader {
-  font-size: 0.85rem;
-  color: #666;
+  font-size: 0.95rem;
+  color: var(--moss-text-muted);
   margin: 0 0 40px 0;
   text-align: center;
 }
 
-/* Minimalist Underlined Inputs */
 .input-group {
   display: flex;
   flex-direction: column;
@@ -147,40 +147,55 @@ hr {
 
 .input-group label {
   font-size: 0.85rem;
-  color: #000;
+  color: var(--moss-text-muted);
   margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
 }
 
 .input-group input {
   padding: 8px 0;
-  font-size: 0.95rem;
+  font-size: 1rem;
   border: none;
-  border-bottom: 1px solid #ccc;
-  /* Sleek underline */
+  border-bottom: 1px solid rgba(131, 143, 88, 0.3);
   outline: none;
   background: transparent;
   width: 100%;
+  color: var(--moss-text-dark);
 }
 
 .input-group input:focus {
-  border-bottom-color: #000;
+  border-bottom-color: var(--moss-matcha);
 }
 
 .login-btn {
   width: 100%;
-  padding: 14px;
-  background: #333;
-  color: #fff;
+  padding: 16px;
+  background: var(--moss-strawberry);
+  color: var(--moss-text-dark);
   border: none;
-  border-radius: 25px;
-  /* Pill shape */
-  font-size: 0.95rem;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
   margin-top: 10px;
+  transition: transform 0.2s;
+}
+
+.login-btn:hover {
+  transform: translateY(-2px);
+}
+
+.login-footer-text {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 0.9rem;
+  color: var(--moss-text-muted);
 }
 
 /* ==========================================================================
-   4. CURATED FEED & RECENT TRADES GRID
+   3. CURATED FEED & PRODUCT CARDS (RESTORED)
    ========================================================================== */
 .feed-grid {
   display: grid;
@@ -194,7 +209,8 @@ hr {
   width: 100%;
   height: 420px;
   overflow: hidden;
-  background-color: #fafafa;
+  background-color: #F1F0EA;
+  border-radius: 16px;
 }
 
 .product-card-image-wrapper img {
@@ -202,4 +218,5 @@ hr {
   height: 100%;
   object-fit: cover;
   display: block;
+  border-radius: 16px;
 }

@@ -1,354 +1,253 @@
-// ────────────────────────────────────────────────────────────────────────────
-// FILE LOCATION: frontend/src/components/ProfileHeader.jsx 
-// ────────────────────────────────────────────────────────────────────────────
+// frontend/src/components/ProfileHeader.jsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import udiPfp from '../assets/udipfp.jpeg';
 
-// Import the dedicated Components
-import FitPredictor from './FitPredictor';
-import FriendManager from './FriendManager';
+const convertBraToInches = (inputValue) => {
+    if (!inputValue) return null;
+    if (!isNaN(inputValue)) return parseFloat(inputValue);
+    const match = String(inputValue).toUpperCase().trim().match(/(\d+)([A-Z]+)/);
+    if (!match) return parseFloat(inputValue) || null;
+    const band = parseInt(match[1]);
+    const cup = match[2];
+    const cupValues = { 'AA': 0.5, 'A': 1, 'B': 2, 'C': 3, 'D': 4, 'DD': 5, 'E': 6, 'F': 7 };
+    return band + (cupValues[cup] || 2);
+};
 
-export default function ProfileHeader({ user, products, profileUser, onOpenFriendProfile, onStartMessage, onFitBaselineChange }) {
-    const fileInputRef = useRef(null);
-    const [uploading, setUploading] = useState(false);
+export default function ProfileHeader({ user, profileUser, onStartMessage }) {
+    const isOwnProfile = !profileUser;
+    const displayUser = profileUser || user;
 
-    // Custom aesthetic notification state
-    const [toast, setToast] = useState('');
-
-    const isMyProfile = !profileUser;
-
-    const [userData, setUserData] = useState({
-        username: 'moss curator',
-        avatarUrl: null,
-        brandsInterested: ['aritzia', 'zara', 'lululemon', 'urban outfitters'],
-        stylesAesthetics: ['minimalist', 'clean girl', 'coquette', '90s archival']
-    });
-
-    const displayUser = isMyProfile ? userData : profileUser;
-
-    // AESTHETIC POPUP HELPER
-    const showToast = (message) => {
-        setToast(message);
-        setTimeout(() => setToast(''), 3000); // Disappears after 3 seconds
-    };
-
-    // FIXED CACHE/FLASHING GLITCH: Calculate items synchronously during render, NOT in a useEffect
-    const targetIdentifier = isMyProfile ? user?.id : profileUser?.username;
-    const userUploadedItems = (products || []).filter(item => {
-        if (isMyProfile) {
-            return item.uploaded_by === user?.id && !item.is_mock && !item.is_sold;
-        } else {
-            return item.uploaded_by === targetIdentifier || (item.brand && !item.is_sold);
-        }
-    });
-
-    const totalListings = userUploadedItems.length;
-
-    const fetchUserData = async () => {
-        if (!isMyProfile) return;
-        try {
-            const { data: { user: authUser } } = await supabase.auth.getUser();
-
-            if (authUser && authUser.user_metadata) {
-                const meta = authUser.user_metadata;
-                setUserData({
-                    username: meta.username || authUser.email?.split('@')[0] || 'moss curator',
-                    avatarUrl: meta.avatar_url || null,
-                    brandsInterested: meta.brands_interested || ['aritzia', 'zara', 'lululemon'],
-                    stylesAesthetics: meta.styles_aesthetics || ['minimalist', 'clean girl']
-                });
-            }
-        } catch (err) {
-            console.warn("Supabase context profile load glitch:", err);
-        }
-    };
+    const [activeTab, setActiveTab] = useState('measurements');
+    const [isEditingFit, setIsEditingFit] = useState(false);
+    const [measurements, setMeasurements] = useState({ bustInput: '', waist: '', hips: '' });
+    const [savedBustInches, setSavedBustInches] = useState(null);
+    const [bodyScanFile, setBodyScanFile] = useState(null);
+    const [bodyScanUrl, setBodyScanUrl] = useState(null);
+    const [brands, setBrands] = useState([]);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
-        fetchUserData();
-    }, [user, isMyProfile]);
+        const fetchProfileData = async () => {
+            if (!displayUser?.id) return;
+            const { data } = await supabase.from('profiles').select('bust, waist, hips, body_scan_url, brands_interested').eq('id', displayUser.id).single();
+            if (data) {
+                setMeasurements({ bustInput: data.bust ? String(data.bust) : '', waist: data.waist || '', hips: data.hips || '' });
+                setSavedBustInches(data.bust || null);
+                setBodyScanUrl(data.body_scan_url || null);
+                setBrands(data.brands_interested || ['Aritzia', 'Zara', 'Reformation']);
+            }
+        };
+        fetchProfileData();
+    }, [displayUser]);
 
-    const handleAvatarClick = () => {
-        if (!isMyProfile) return;
-        fileInputRef.current.click();
-    };
+    const handleSaveFitProfile = async () => {
+        setIsSaving(true);
+        const calculatedBust = convertBraToInches(measurements.bustInput);
+        let finalImageUrl = bodyScanUrl;
 
-    const handleFileChange = async (e) => {
         try {
-            if (!e.target.files || e.target.files.length === 0) return;
-            setUploading(true);
-            const file = e.target.files[0];
+            if (bodyScanFile) {
+                const { data: uploadData, error: uploadErr } = await supabase.storage
+                    .from('item-images')
+                    .upload(`public/${Date.now()}_bodyscan_${bodyScanFile.name}`, bodyScanFile);
+                if (uploadErr) throw uploadErr;
+                finalImageUrl = supabase.storage.from('item-images').getPublicUrl(uploadData.path).data.publicUrl;
+            }
 
-            const { data: { user: authUser } } = await supabase.auth.getUser();
-            if (!authUser) throw new Error("No user logged in");
+            await supabase.from('profiles').update({
+                bust: calculatedBust,
+                waist: parseFloat(measurements.waist) || null,
+                hips: parseFloat(measurements.hips) || null,
+                body_scan_url: finalImageUrl
+            }).eq('id', user.id);
 
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${authUser.id}-${Math.random()}.${fileExt}`;
-            const filePath = `public/${fileName}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(filePath, file, { cacheControl: '3600', upsert: true });
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(filePath);
-
-            const { error: updateError } = await supabase.auth.updateUser({
-                data: { avatar_url: publicUrl }
-            });
-
-            if (updateError) throw updateError;
-
-            showToast("profile picture updated.");
-            fetchUserData();
+            setSavedBustInches(calculatedBust);
+            setBodyScanUrl(finalImageUrl);
+            setIsEditingFit(false);
         } catch (error) {
-            showToast("error uploading image.");
+            alert("Failed to update fit profile.");
         } finally {
-            setUploading(false);
+            setIsSaving(false);
         }
     };
 
-    const handleMarkAsSold = async (itemId) => {
-        if (!isMyProfile) return;
-        if (!window.confirm("mark this piece as traded/sold? it will be archived.")) return;
+    const handleAddBrand = async () => {
+        const newBrand = prompt("Enter a brand you love:");
+        if (!newBrand || !newBrand.trim()) return;
 
-        try {
-            const { error } = await supabase
-                .from('items')
-                .update({ is_sold: true })
-                .eq('id', itemId);
-
-            if (error) throw error;
-            showToast("listing marked as traded.");
-        } catch (err) {
-            showToast("updated locally for demo.");
-        }
+        const updatedBrands = [...brands, newBrand.trim()];
+        setBrands(updatedBrands);
+        await supabase.from('profiles').update({ brands_interested: updatedBrands }).eq('id', user.id);
     };
+
+    // MOSS Aesthetic Colors
+    const mossColors = ['#F7DDD5', '#FFC3CC', '#D2DB76'];
+    const inputStyle = { width: '100%', padding: '12px 0', border: 'none', borderBottom: '1px solid #28301C', background: 'transparent', outline: 'none', fontSize: '1rem', color: '#28301C', marginBottom: '24px', fontFamily: 'var(--font-body)' };
+    const labelStyle = { fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#65613F', display: 'block', marginBottom: '4px', fontWeight: '600' };
+
+    const tabStyle = (isActive) => ({
+        background: 'none', border: 'none', fontSize: '0.95rem',
+        fontWeight: isActive ? '700' : '500',
+        color: isActive ? '#28301C' : '#9ca3af',
+        borderBottom: isActive ? '2px solid #28301C' : '2px solid transparent',
+        paddingBottom: '12px', cursor: 'pointer', transition: 'all 0.2s', letterSpacing: '0.02em', textTransform: 'lowercase'
+    });
+
+    const displayName = displayUser?.username || displayUser?.email?.split('@')[0] || 'moss user';
 
     return (
-        <div style={{ padding: '40px 20px', fontFamily: 'sans-serif', maxWidth: '850px', margin: '0 auto', position: 'relative' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', fontFamily: 'var(--font-body, "DM Sans", sans-serif)' }}>
 
-            {/* --- CUSTOM MOSS AESTHETIC TOAST NOTIFICATION --- */}
-            {toast && (
-                <div style={{
-                    position: 'fixed',
-                    bottom: '40px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: '#000000',
-                    color: '#ffffff',
-                    padding: '12px 24px',
-                    borderRadius: '30px',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    zIndex: 1000,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                    textTransform: 'lowercase',
-                    letterSpacing: '0.5px'
-                }}>
-                    {toast}
-                </div>
-            )}
+            {/* HEADER */}
+            <div style={{ textAlign: 'center', padding: '60px 0 40px 0' }}>
+                <h1 style={{ fontFamily: 'var(--font-display, "Fraunces", serif)', fontSize: '3.8rem', color: '#28301C', margin: '0 0 16px 0', letterSpacing: '-0.03em', textTransform: 'lowercase' }}>
+                    {displayName}.
+                </h1>
+                <p style={{ color: '#65613F', fontSize: '0.85rem', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: '500' }}>
+                    Toronto, ON • Fashion & Lifestyle
+                </p>
+            </div>
 
-            {/* --- USER DETAILS SECTION --- */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '30px', marginBottom: '40px' }}>
-                <div style={{ position: 'relative', cursor: isMyProfile ? 'pointer' : 'default' }} onClick={handleAvatarClick}>
-                    <img
-                        src={displayUser.avatarUrl || udiPfp}
-                        alt="Profile"
-                        style={{
-                            width: '120px', height: '120px', borderRadius: '50%',
-                            objectFit: 'cover', border: '1px solid #eaeaea',
-                            opacity: uploading ? 0.5 : 1
-                        }}
-                    />
-                    {isMyProfile && (
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            accept="image/*"
-                            style={{ display: 'none' }}
-                        />
-                    )}
-                </div>
+            {/* SCROLLING PILL BRANDS */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '60px', alignItems: 'center' }}>
+                {brands.map((b, idx) => (
+                    <span key={idx} style={{
+                        padding: '8px 24px',
+                        borderRadius: '999px',
+                        fontSize: '0.85rem',
+                        color: '#28301C',
+                        fontWeight: '600',
+                        backgroundColor: mossColors[idx % mossColors.length],
+                        border: '1px solid rgba(40,48,28,0.1)',
+                        letterSpacing: '0.05em',
+                        textTransform: 'uppercase'
+                    }}>
+                        {b}
+                    </span>
+                ))}
+                {isOwnProfile && (
+                    <button onClick={handleAddBrand} style={{
+                        padding: '6px 20px',
+                        borderRadius: '999px',
+                        fontSize: '1.2rem',
+                        color: '#28301C',
+                        backgroundColor: 'transparent',
+                        border: '1px dashed #28301C',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s ease',
+                        opacity: 0.7
+                    }}
+                        onMouseOver={(e) => e.target.style.opacity = 1}
+                        onMouseOut={(e) => e.target.style.opacity = 0.7}
+                    >
+                        +
+                    </button>
+                )}
+            </div>
 
-                <div>
-                    <h1 style={{ margin: '0 0 5px 0', fontSize: '28px', fontWeight: '500', textTransform: 'lowercase' }}>
-                        @{displayUser.username}
-                    </h1>
+            {/* TABS */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '40px', borderBottom: '1px solid #eaeaea', marginBottom: '40px' }}>
+                <button style={tabStyle(activeTab === 'measurements')} onClick={() => setActiveTab('measurements')}>fit metrics</button>
+                <button style={tabStyle(activeTab === 'closet')} onClick={() => setActiveTab('closet')}>my closet</button>
+                <button style={tabStyle(activeTab === 'trades')} onClick={() => setActiveTab('trades')}>trade history</button>
+            </div>
 
-                    {isMyProfile ? (
-                        <>
-                            <p style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>
-                                <strong>3.5</strong> available credits • <span style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>ARCHIVAL CONNOISSEUR</span>
-                            </p>
-                            <div style={{ color: '#0066cc', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <span>✓</span> $10 PREMIUM FEED CURATION ACTIVE
-                            </div>
-                        </>
-                    ) : (
-                        <div style={{ marginTop: '10px' }}>
-                            <p style={{ margin: '0 0 12px 0', color: '#666', fontSize: '13px' }}>
-                                MOSS Member • Active Closet Curator
-                            </p>
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                <button
-                                    onClick={() => onStartMessage(displayUser)}
-                                    style={{
-                                        backgroundColor: '#000000',
-                                        color: '#ffffff',
-                                        border: 'none',
-                                        borderRadius: '20px',
-                                        padding: '8px 20px',
-                                        fontSize: '13px',
-                                        fontWeight: '600',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    message @{displayUser.username}
-                                </button>
-                                <button
-                                    onClick={async () => {
-                                        const { error } = await supabase
-                                            .from('friendships')
-                                            .insert([{ user_id: user?.id, friend_id: displayUser.id, status: 'pending' }]);
+            {/* TAB CONTENT: MEASUREMENTS */}
+            {activeTab === 'measurements' && (
+                <div style={{ animation: 'fadeIn 0.4s ease' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+                        <h3 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-display)', color: '#28301C', margin: 0 }}>your metrics.</h3>
+                        {isOwnProfile && (
+                            <button onClick={() => setIsEditingFit(true)} style={{ padding: '10px 24px', backgroundColor: '#D2DB76', color: '#28301C', border: 'none', borderRadius: '999px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                calibrate fit
+                            </button>
+                        )}
+                    </div>
 
-                                        if (error) {
-                                            showToast("request already sent.");
-                                        } else {
-                                            showToast("friend request sent.");
-                                        }
-                                    }}
-                                    style={{
-                                        backgroundColor: '#ffffff',
-                                        color: '#000000',
-                                        border: '1px solid #000000',
-                                        borderRadius: '20px',
-                                        padding: '8px 20px',
-                                        fontSize: '13px',
-                                        fontWeight: '600',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    add friend
-                                </button>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '40px', backgroundColor: '#FCFAF8', padding: '40px', borderRadius: '24px', border: '1px solid rgba(40,48,28,0.1)' }}>
+                        {/* Mannequin Display */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                            <div style={{ width: '160px', height: '220px', borderRadius: '16px', backgroundColor: '#F7DDD5', overflow: 'hidden', border: '1px solid rgba(40,48,28,0.1)' }}>
+                                {bodyScanUrl ? (
+                                    <img src={bodyScanUrl} alt="Mannequin" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#28301C', fontSize: '0.8rem', textAlign: 'center', padding: '20px', fontWeight: '600' }}>upload base silhouette</div>
+                                )}
                             </div>
                         </div>
-                    )}
-                </div>
-            </div>
 
-            {/* --- PREFERENCES SECTION --- */}
-            <div style={{ display: 'flex', gap: '60px', marginBottom: '40px', borderBottom: '1px solid #eee', paddingBottom: '30px' }}>
-                <div>
-                    <h3 style={{ fontSize: '12px', letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 15px 0' }}>Brands Interested</h3>
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        {(displayUser.brandsInterested || []).map(b => (
-                            <span key={b} style={{ border: '1px solid #ddd', borderRadius: '20px', padding: '6px 14px', fontSize: '13px', textTransform: 'lowercase' }}>
-                                {b}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-                <div>
-                    <h3 style={{ fontSize: '12px', letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 15px 0' }}>Styles & Aesthetics</h3>
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        {(displayUser.stylesAesthetics || []).map(s => (
-                            <span key={s} style={{ border: '1px solid #ddd', borderRadius: '20px', padding: '6px 14px', fontSize: '13px', textTransform: 'lowercase' }}>
-                                {s}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* --- FIT PREDICTOR BASELINE COMPONENT --- */}
-            {isMyProfile && (
-                <FitPredictor onFitBaselineChange={onFitBaselineChange} />
-            )}
-
-            {/* --- STATS SECTION --- */}
-            {isMyProfile && (
-                <div style={{ display: 'flex', gap: '40px', marginBottom: '40px', backgroundColor: '#fafafa', padding: '20px', borderRadius: '8px' }}>
-                    <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#111' }}>{totalListings}</div>
-                        <div style={{ fontSize: '12px', textTransform: 'uppercase', color: '#666', marginTop: '4px' }}>your uploads</div>
-                    </div>
-                    <div style={{ textAlign: 'center', flex: 1, borderLeft: '1px solid #eaeaea', borderRight: '1px solid #eaeaea' }}>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#111' }}>1</div>
-                        <div style={{ fontSize: '12px', textTransform: 'uppercase', color: '#666', marginTop: '4px' }}>trades pending</div>
-                    </div>
-                    <div style={{ textAlign: 'center', flex: 1 }}>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#111' }}>2</div>
-                        <div style={{ fontSize: '12px', textTransform: 'uppercase', color: '#666', marginTop: '4px' }}>trades completed</div>
-                    </div>
-                </div>
-            )}
-
-            {/* --- GRID SPLIT: UPLOADS & FRIENDS --- */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '40px' }}>
-
-                {/* Closet Uploads Feed */}
-                <div>
-                    <h3 style={{ fontSize: '14px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '20px' }}>
-                        {isMyProfile ? 'Your Closet Uploads' : `@${displayUser.username}'s Closet`}
-                    </h3>
-                    {userUploadedItems.length === 0 ? (
-                        <p style={{ color: '#888', fontSize: '14px' }}>no active listings available right now.</p>
-                    ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '15px' }}>
-                            {userUploadedItems.map(item => (
-                                <div key={item.id} style={{ border: '1px solid #eee', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#fff', position: 'relative' }}>
-                                    <img
-                                        src={item.clothImage}
-                                        alt={item.title}
-                                        style={{ width: '100%', height: '140px', objectFit: 'cover' }}
-                                    />
-                                    <div style={{ padding: '8px' }}>
-                                        <div style={{ fontSize: '11px', fontWeight: 'bold', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                            {item.title}
-                                        </div>
-                                        <div style={{ fontSize: '10px', color: '#666', marginBottom: '6px' }}>{item.credits} cr</div>
-
-                                        {isMyProfile && (
-                                            <button
-                                                onClick={() => handleMarkAsSold(item.id)}
-                                                style={{
-                                                    width: '100%',
-                                                    backgroundColor: '#111',
-                                                    color: '#fff',
-                                                    border: 'none',
-                                                    borderRadius: '3px',
-                                                    padding: '4px',
-                                                    fontSize: '9px',
-                                                    fontWeight: '600',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                mark traded
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+                        {/* Metrics Display */}
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '24px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(40,48,28,0.1)', paddingBottom: '16px' }}>
+                                <span style={{ fontSize: '0.85rem', color: '#65613F', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600' }}>Bust</span>
+                                <span style={{ fontSize: '1.2rem', color: '#28301C', fontWeight: '700' }}>{savedBustInches || '--'}"</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(40,48,28,0.1)', paddingBottom: '16px' }}>
+                                <span style={{ fontSize: '0.85rem', color: '#65613F', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600' }}>Waist</span>
+                                <span style={{ fontSize: '1.2rem', color: '#28301C', fontWeight: '700' }}>{measurements.waist || '--'}"</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px' }}>
+                                <span style={{ fontSize: '0.85rem', color: '#65613F', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600' }}>Hips</span>
+                                <span style={{ fontSize: '1.2rem', color: '#28301C', fontWeight: '700' }}>{measurements.hips || '--'}"</span>
+                            </div>
                         </div>
-                    )}
+                    </div>
                 </div>
+            )}
 
-                {/* SOCIAL GRAPH: Managed by FriendManager */}
-                <FriendManager
-                    currentUser={user}
-                    isMyProfile={isMyProfile}
-                    onOpenFriendProfile={onOpenFriendProfile}
-                />
+            {/* TAB CONTENT: CLOSET & TRADES */}
+            {activeTab === 'closet' && (
+                <div style={{ animation: 'fadeIn 0.4s ease', textAlign: 'center', padding: '80px 20px', backgroundColor: '#FCFAF8', borderRadius: '24px', border: '1px solid rgba(40,48,28,0.1)' }}>
+                    <h3 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', color: '#28301C', margin: '0 0 12px 0' }}>curated pieces.</h3>
+                    <p style={{ color: '#65613F', fontSize: '0.95rem' }}>Your uploaded items will appear here beautifully gridded.</p>
+                </div>
+            )}
 
-            </div>
+            {activeTab === 'trades' && (
+                <div style={{ animation: 'fadeIn 0.4s ease', textAlign: 'center', padding: '80px 20px', backgroundColor: '#FCFAF8', borderRadius: '24px', border: '1px solid rgba(40,48,28,0.1)' }}>
+                    <h3 style={{ fontSize: '1.8rem', fontFamily: 'var(--font-display)', color: '#28301C', margin: '0 0 12px 0' }}>trade history.</h3>
+                    <p style={{ color: '#65613F', fontSize: '0.95rem' }}>Your past exchanges and pending requests.</p>
+                </div>
+            )}
 
+            {/* Modal Overlay */}
+            {isEditingFit && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(252,250,248,0.8)', backdropFilter: 'blur(12px)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ backgroundColor: '#fff', padding: '48px', borderRadius: '24px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 40px rgba(0,0,0,0.08)', border: '1px solid #D2DB76' }}>
+                        <h2 style={{ fontFamily: 'var(--font-display)', margin: '0 0 32px 0', color: '#28301C', fontSize: '2rem', textTransform: 'lowercase' }}>calibration.</h2>
+
+                        <label style={labelStyle}>Your Mannequin Photo</label>
+                        <div style={{ marginBottom: '32px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <input type="file" accept="image/*" onChange={(e) => setBodyScanFile(e.target.files[0])} style={{ fontSize: '0.9rem', padding: '12px 0' }} />
+                        </div>
+
+                        <label style={labelStyle}>Bust (Inches or Bra Size)</label>
+                        <input type="text" value={measurements.bustInput} onChange={(e) => setMeasurements({ ...measurements, bustInput: e.target.value })} style={inputStyle} placeholder="e.g. 36C or 39" />
+
+                        <div style={{ display: 'flex', gap: '24px' }}>
+                            <div style={{ flex: 1 }}>
+                                <label style={labelStyle}>Waist</label>
+                                <input type="number" step="0.5" value={measurements.waist} onChange={(e) => setMeasurements({ ...measurements, waist: e.target.value })} style={inputStyle} placeholder="28" />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label style={labelStyle}>Hips</label>
+                                <input type="number" step="0.5" value={measurements.hips} onChange={(e) => setMeasurements({ ...measurements, hips: e.target.value })} style={inputStyle} placeholder="38" />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                            <button onClick={() => setIsEditingFit(false)} style={{ flex: 1, padding: '16px', backgroundColor: 'transparent', border: '1px solid #28301C', borderRadius: '999px', color: '#28301C', cursor: 'pointer', fontWeight: '600' }}>cancel</button>
+                            <button onClick={handleSaveFitProfile} disabled={isSaving} style={{ flex: 1, padding: '16px', backgroundColor: '#28301C', border: 'none', borderRadius: '999px', color: '#D2DB76', cursor: 'pointer', fontWeight: '600' }}>
+                                {isSaving ? 'saving...' : 'save'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

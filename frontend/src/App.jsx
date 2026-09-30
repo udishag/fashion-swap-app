@@ -221,6 +221,10 @@ function App() {
     uploaded_brands: profile?.uploaded_brands ?? [],
     lat: profile?.lat,
     lon: profile?.lon,
+    bust: profile?.bust,
+    waist: profile?.waist,
+    hips: profile?.hips,
+    body_scan_url: profile?.body_scan_url,
   };
 
   return (

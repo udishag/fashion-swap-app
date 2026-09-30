@@ -28,7 +28,7 @@ export function useUserProfile(userId) {
         async function load() {
             const { data: profileRow, error: profileErr } = await supabase
                 .from('profiles')
-                .select('id, brands_interested, style_preferences, has_premium, lat, lon')
+                .select('id, brands_interested, style_preferences, has_premium, lat, lon, bust, waist, hips, body_scan_url')
                 .eq('id', userId)
                 .maybeSingle()
 
